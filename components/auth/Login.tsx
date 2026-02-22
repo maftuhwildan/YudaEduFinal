@@ -37,8 +37,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       } else {
         setError(result.error || 'Invalid credentials');
       }
-    } catch (err) {
-      setError('An unexpected error occurred');
+    } catch (err: any) {
+      setError(err?.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
