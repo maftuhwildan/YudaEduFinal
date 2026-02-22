@@ -75,7 +75,8 @@ export async function login(formData: FormData) {
             role: user.role,
             classId: user.classId,
             className: user.class?.name,
-            profileImage: user.profileImage
+            profileImage: user.profileImage,
+            _lastValidated: Date.now(),
         };
 
         (await cookies()).set('session', JSON.stringify(sessionData), {
@@ -113,6 +114,11 @@ export async function logout() {
     return { success: true };
 }
 
+// How often to re-validate session token against the database (ms).
+// Between validations, the cookie is trusted (like the old YudaEdu version).
+// This keeps the "kick session" feature working while drastically reducing DB load.
+const SESSION_REVALIDATE_MS = 60_000; // 60 seconds
+
 export async function getSession() {
     const sessionCookie = (await cookies()).get('session');
     if (!sessionCookie) return null;
@@ -121,19 +127,36 @@ export async function getSession() {
         const data = JSON.parse(sessionCookie.value);
         if (!data?.id || !data?.sessionToken) return null;
 
-        // Validate token against DB — if it doesn't match, session was
-        // invalidated by a login from another device
-        const user = await prisma.user.findUnique({
-            where: { id: data.id },
-            select: { sessionToken: true }
-        });
+        const now = Date.now();
+        const lastValidated = data._lastValidated || 0;
 
-        if (!user || user.sessionToken !== data.sessionToken) {
-            // Token mismatch → session kicked by another login
-            (await cookies()).delete('session');
-            return null;
+        // Only hit the DB if enough time has passed since last validation
+        if (now - lastValidated > SESSION_REVALIDATE_MS) {
+            const user = await prisma.user.findUnique({
+                where: { id: data.id },
+                select: { sessionToken: true }
+            });
+
+            if (!user || user.sessionToken !== data.sessionToken) {
+                // Token mismatch → session kicked by another login
+                (await cookies()).delete('session');
+                return null;
+            }
+
+            // Refresh the cookie with updated validation timestamp
+            const refreshed = { ...data, _lastValidated: now };
+            (await cookies()).set('session', JSON.stringify(refreshed), {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24,
+            });
+
+            return refreshed;
         }
 
+        // Within revalidation window — trust the cookie (no DB query)
         return data;
     } catch {
         return null;
@@ -199,7 +222,8 @@ export async function updateAdminProfile(input: {
             role: updated.role,
             classId: updated.classId,
             className: updated.class?.name,
-            profileImage: updated.profileImage
+            profileImage: updated.profileImage,
+            _lastValidated: Date.now(),
         };
 
         (await cookies()).set('session', JSON.stringify(newSessionData), {

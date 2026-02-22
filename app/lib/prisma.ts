@@ -2,12 +2,24 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-// WARN-7: For Hostinger production, add ?connection_limit=10 to DATABASE_URL
-// Example: mysql://user:pass@host:3306/db?connection_limit=10
-export const prisma =
-    globalForPrisma.prisma ||
-    new PrismaClient({
+function createPrismaClient() {
+    const client = new PrismaClient({
         log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
     });
 
+    // Graceful shutdown - disconnect on process exit
+    client.$on('beforeExit' as never, async () => {
+        console.log('[Prisma] Disconnecting before exit...');
+        await client.$disconnect();
+    });
+
+    return client;
+}
+
+// In development: reuse across hot-reloads
+// In production: also reuse to avoid creating too many connections
+export const prisma = globalForPrisma.prisma || createPrismaClient();
+
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// Also cache in production to prevent connection churn on serverless/shared hosting
+if (process.env.NODE_ENV === 'production') globalForPrisma.prisma = prisma;
