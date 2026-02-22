@@ -102,8 +102,17 @@ export function getQuizContentClass(html: string): string {
  */
 function wrapTables(html: string): string {
     if (!html.includes('<table')) return html;
-    // Wrap <table...>...</table> in a measurement wrapper div
-    return html.replace(
+
+    // Step 1: Strip the <div class="table-responsive" style="overflow-x: auto; ...">
+    // wrapper that RichTextEditor bakes into stored HTML — its inline overflow-x: auto
+    // causes scrollbar regardless of any parent overflow:hidden
+    let cleaned = html.replace(
+        /<div\s+class="table-responsive"[^>]*>([\s\S]*?)<\/div>/gi,
+        '$1'
+    );
+
+    // Step 2: Wrap <table...>...</table> in our measurement wrapper div
+    return cleaned.replace(
         /(<table[\s\S]*?<\/table>)/gi,
         '<div class="quiz-table-wrapper" style="display:inline-block;width:max-content;max-width:none">$1</div>'
     );

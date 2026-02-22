@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.local
+.env.production
+*.md
+.vscode
+.idea
+Thumbs.db
+.DS_Store

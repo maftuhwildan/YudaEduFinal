@@ -32,10 +32,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       const result = await login(formData);
-      if (result.success && result.user) {
+      if (result?.success && result.user) {
         onLogin(result.user as any);
       } else {
-        setError(result.error || 'Invalid credentials');
+        setError(result?.error || 'Login gagal. Coba lagi nanti.');
       }
     } catch (err: any) {
       setError(err?.message || 'An unexpected error occurred');

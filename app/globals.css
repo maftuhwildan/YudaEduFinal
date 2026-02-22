@@ -151,6 +151,17 @@
 .quiz-content table th {
   white-space: nowrap;
   padding: 6px 8px;
+  border: 1px solid hsl(var(--border));
+}
+
+/* Dark mode: make table borders more visible */
+.dark .quiz-content table td,
+.dark .quiz-content table th {
+  border-color: hsl(240, 4%, 30%);
+}
+
+.dark .quiz-content table th {
+  background-color: hsl(240, 5%, 15%);
 }
 
 /* ── QUIZ SCALE AREA ──────────────────────────────────────────────────────
@@ -180,6 +191,13 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin: 0.5rem 0;
+}
+
+/* OVERRIDE: Inside quiz, neutralize the table-responsive inline overflow-x: auto
+   that RichTextEditor bakes into saved HTML. The auto-scale hook handles sizing. */
+.quiz-content .table-responsive {
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
 }
 
 /* Indent/blockquote styling for accounting questions */
@@ -236,6 +254,7 @@
   .mobile-stimulus {
     max-height: 35vh !important;
     overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* Pre-formatted lines (accounting entries) */

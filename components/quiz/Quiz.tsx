@@ -389,7 +389,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex overflow-hidden">
+            <div ref={quizContentRef} className="flex-1 flex overflow-hidden">
                 {hasStimulus && (
                     <div className="hidden lg:block w-1/2 p-8 overflow-y-auto bg-muted/30 border-r">
                         <Card className="min-h-full">
@@ -397,18 +397,24 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                                 <CardDescription className="uppercase tracking-widest text-xs font-bold">Stimulus Material</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="quiz-content prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatQuizContent(currentQ.stimulus || '') }} />
+                                <div className="quiz-scale-area overflow-hidden">
+                                    <div className="quiz-content prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatQuizContent(currentQ.stimulus || '') }} />
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
                 )}
 
                 <div className={`flex-1 flex flex-col h-full overflow-hidden relative ${hasStimulus ? 'lg:w-1/2' : 'w-full max-w-4xl mx-auto'}`}>
-                    <div ref={quizContentRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-8">
                         {hasStimulus && (
-                            <Alert className="lg:hidden mb-6 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
-                                <AlertDescription>
-                                    <div className="quiz-content prose prose-sm dark:prose-invert max-w-none mobile-stimulus" dangerouslySetInnerHTML={{ __html: formatQuizContent(currentQ.stimulus || '') }} />
+                            <Alert className="lg:hidden mb-6 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800 overflow-hidden">
+                                <AlertDescription className="min-w-0 overflow-hidden">
+                                    <div className="mobile-stimulus">
+                                        <div className="quiz-scale-area overflow-hidden">
+                                            <div className="quiz-content prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatQuizContent(currentQ.stimulus || '') }} />
+                                        </div>
+                                    </div>
                                 </AlertDescription>
                             </Alert>
                         )}
