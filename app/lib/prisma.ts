@@ -3,17 +3,9 @@ import { PrismaClient } from '@prisma/client';
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-    const client = new PrismaClient({
+    return new PrismaClient({
         log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
     });
-
-    // Graceful shutdown - disconnect on process exit
-    client.$on('beforeExit' as never, async () => {
-        console.log('[Prisma] Disconnecting before exit...');
-        await client.$disconnect();
-    });
-
-    return client;
 }
 
 // In development: reuse across hot-reloads
