@@ -47,44 +47,49 @@ export async function login(formData: FormData) {
         return { error: `Terlalu banyak percobaan login. Coba lagi dalam ${retrySeconds} detik.` };
     }
 
-    const user = await prisma.user.findFirst({
-        where: { username },
-        include: { class: true }
-    });
+    try {
+        const user = await prisma.user.findFirst({
+            where: { username },
+            include: { class: true }
+        });
 
-    if (!user) return { error: 'Invalid credentials' };
+        if (!user) return { error: 'Invalid credentials' };
 
-    // Verify password using bcrypt compare
-    const isPasswordValid = await compare(password, user.passwordHash);
-    if (!isPasswordValid) return { error: 'Invalid credentials' };
+        // Verify password using bcrypt compare
+        const isPasswordValid = await compare(password, user.passwordHash);
+        if (!isPasswordValid) return { error: 'Invalid credentials' };
 
-    // Generate unique session token — overwrites any previous token,
-    // kicking out the old device on its next request
-    const sessionToken = randomUUID();
-    await prisma.user.update({
-        where: { id: user.id },
-        data: { sessionToken }
-    });
+        // Generate unique session token — overwrites any previous token,
+        // kicking out the old device on its next request
+        const sessionToken = randomUUID();
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { sessionToken }
+        });
 
-    const sessionData = {
-        sessionToken,
-        id: user.id,
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role,
-        classId: user.classId,
-        className: user.class?.name,
-        profileImage: user.profileImage
-    };
+        const sessionData = {
+            sessionToken,
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName,
+            role: user.role,
+            classId: user.classId,
+            className: user.class?.name,
+            profileImage: user.profileImage
+        };
 
-    (await cookies()).set('session', JSON.stringify(sessionData), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24, // 24 hours
-    });
-    return { success: true, user: sessionData };
+        (await cookies()).set('session', JSON.stringify(sessionData), {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24, // 24 hours
+        });
+        return { success: true, user: sessionData };
+    } catch (e: any) {
+        logger.error('Login error:', e);
+        return { error: e.message || 'Terjadi kesalahan saat login' };
+    }
 }
 
 export async function logout() {
