@@ -363,8 +363,8 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
             </header>
 
             {/* Question Number Navigation */}
-            <div className="bg-card border-b px-2 sm:px-4 py-2 shrink-0 overflow-y-auto max-h-28 sm:max-h-32">
-                <div className="flex flex-wrap gap-1.5 sm:gap-2 py-1 px-1">
+            <div className="bg-card border-b px-2 sm:px-4 py-1.5 shrink-0">
+                <div className="flex flex-wrap gap-1 sm:gap-1.5 py-0.5 px-1">
                     {questions.map((q, i) => {
                         const isCurrent = i === currentIndex;
                         const isAnswered = !!answers[q.id];
@@ -374,7 +374,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setCurrentIndex(i)}
-                                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 border-2 ${isCurrent
+                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md text-[10px] sm:text-xs font-semibold transition-all duration-150 border-2 ${isCurrent
                                     ? 'bg-primary text-primary-foreground border-primary shadow-md scale-110 hover:bg-primary/90'
                                     : isAnswered
                                         ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/50 hover:bg-green-500/25 hover:border-green-500'
