@@ -1,0 +1,5 @@
+{
+  "name": "YudaEdu",
+  "description": "A comprehensive quiz platform with Admin and User roles. Features AI-powered question generation, user management, limit enforcement, immediate grading, and Excel result exports. Built as a persistent React SPA simulating a full stack environment.",
+  "requestFramePermissions": []
+}

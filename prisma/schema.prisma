@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id             String   @id @default(uuid())
+  username       String   @unique
+  fullName       String?
+  absentNumber   String?
+  passwordHash   String
+  role           Role     @default(USER)
+  classId        String?
+  maxAttempts    Int      @default(1)
+  currentAttempts Int     @default(0)
+  sessionToken   String?
+  profileImage   String?
+  
+  class          ClassGroup? @relation(fields: [classId], references: [id])
+  results        Result[]
+  sessions       ExamSession[]
+}
+
+model ClassGroup {
+  id    String @id @default(uuid())
+  name  String
+  users User[]
+}
+
+model QuizPack {
+  id                 String   @id @default(uuid())
+  name               String
+  isActive           Boolean  @default(false)
+  timeLimit          Int      // minutes
+  token              String
+  // Storing allowedClassIds as JSON for simplicity, or we could do a many-to-many relation
+  allowedClassIds    Json     @default("[]") 
+  randomizeQuestions Boolean  @default(false)
+  randomizeOptions   Boolean  @default(false)
+  
+  scheduleStart      DateTime?
+  scheduleEnd        DateTime?
+  autoRotateToken    Boolean  @default(false)
+  lastTokenUpdate    DateTime?
+
+  questions          Question[]
+  sessions           ExamSession[]
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  packId        String
+  variant       String
+  text          String   @db.LongText
+  stimulus      String?  @db.LongText
+  imageUrl      String?
+  options       Json     @default("[]") // string[]
+  correctAnswer String   @db.LongText
+  
+  pack          QuizPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+}
+
+model Result {
+  id             String   @id @default(uuid())
+  userId         String
+  username       String
+  classId        String?
+  score          Float
+  correctCount   Int
+  totalQuestions Int
+  packName       String
+  variant        String
+  timestamp      DateTime @default(now())
+  cheatCount     Int      @default(0)
+  answers        Json?    // Record<questionId, selectedAnswer>
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ExamSession {
+  userId             String
+  username           String
+  fullName           String
+  classId            String?
+  packId             String
+  packName           String
+  variant            String
+  startTime          BigInt    // using BigInt for timestamp (ms) or DateTime
+  lastUpdate         BigInt    
+  currentQuestionIndex Int
+  answeredCount      Int
+  answers            Json      // Record<string, string>
+  totalQuestions     Int
+  cheatCount         Int
+
+  status             String    @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED
+  score              Float?
+  endTime            DateTime?
+
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack               QuizPack  @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@id([userId, packId])
+}
+
+model LoginSlide {
+  id          String   @id @default(uuid())
+  title       String?
+  description String?  @db.LongText
+  imageUrl    String
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}

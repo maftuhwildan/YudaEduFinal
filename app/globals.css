@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================
+   SHADCN CSS VARIABLES - YUDAEDU THEME
+   ============================ */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 243 83% 64%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 243 83% 95%;
+  --accent-foreground: 243 83% 50%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 243 83% 64%;
+  --radius: 1rem;
+  --chart-1: 243 83% 64%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 95%;
+  --card: 240 10% 6%;
+  --card-foreground: 0 0% 95%;
+  --popover: 240 10% 5%;
+  --popover-foreground: 0 0% 95%;
+  --primary: 243 83% 64%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 4% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 5% 15%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 243 30% 20%;
+  --accent-foreground: 243 83% 80%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 85.7% 97.3%;
+  --border: 240 4% 15.9%;
+  --input: 240 4% 15.9%;
+  --ring: 243 83% 64%;
+  --chart-1: 243 83% 64%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ============================
+   UTILITY CLASSES
+   ============================ */
+
+/* Selection styling */
+::selection {
+  @apply bg-primary text-primary-foreground;
+}
+
+/* Inline tab/spaces styling for accounting questions */
+.inline-tab {
+  display: inline-block;
+  width: 2em;
+}
+
+/* Pre-formatted line class - for accounting entries with tab spacing */
+.pre-line {
+  white-space: nowrap;
+  display: block;
+}
+
+/* Explicit pre-formatted class for content that MUST preserve layout */
+.preserve-format {
+  white-space: pre-wrap !important;
+  font-family: inherit;
+}
+
+/* ============================
+   IMAGE SIZE CONSTRAINTS
+   ============================ */
+
+/* Rich text editor - constrain images while editing */
+[contenteditable] img {
+  max-width: 100%;
+  max-height: 250px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* Quiz display - slightly larger images for students */
+.quiz-content img,
+.quiz-question-content img {
+  max-width: 100%;
+  max-height: 300px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+/* Admin question list - small uniform thumbnails */
+.question-preview img {
+  max-width: 200px;
+  max-height: 120px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+/* ============================
+   QUIZ CONTENT STYLES
+   ============================ */
+
+/* Tables in quiz: natural width, JS auto-scales if too wide */
+.quiz-content table {
+  font-size: inherit;
+  width: auto;
+  max-width: none;
+  border-collapse: collapse;
+}
+
+.quiz-content table td,
+.quiz-content table th {
+  white-space: nowrap;
+  padding: 6px 8px;
+}
+
+/* ── QUIZ SCALE AREA ──────────────────────────────────────────────────────
+   Wraps question text and each option content area.
+   overflow:hidden on both axes:
+     1. clientWidth reports the TRUE available width (never expands to fit
+        an overflowing inline-block child like .quiz-table-wrapper)
+     2. Clips any remaining overflow after the JS scale transform
+   JS reads clientWidth here; measures natural table width via off-screen
+   clone — completely bypassing this element's constraints.
+───────────────────────────────────────────────────────────────────────── */
+.quiz-scale-area {
+  overflow: hidden;
+}
+
+/* The inline-block wrapper injected around each <table> by formatQuizContent.
+   Must be free to grow to max-content so the clone measurement is meaningful. */
+.quiz-table-wrapper {
+  display: inline-block;
+  width: max-content;
+  max-width: none;
+  vertical-align: top;
+}
+
+/* Fallback for older layouts without quiz-scale-area */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.5rem 0;
+}
+
+/* Indent/blockquote styling for accounting questions */
+.prose blockquote,
+.quiz-content blockquote {
+  margin-left: 1.5rem;
+  padding-left: 0.75rem;
+  @apply border-l-[3px] border-border;
+  font-style: normal;
+}
+
+/* Nested indents */
+.prose blockquote blockquote,
+.quiz-content blockquote blockquote {
+  margin-left: 1rem;
+}
+
+/* ============================
+   MOBILE RESPONSIVE STYLES
+   ============================ */
+
+@media (max-width: 640px) {
+
+  /*
+   * IMPORTANT: Do NOT put overflow:hidden on .quiz-question-content or
+   * .quiz-option-content here.  The JS auto-scale hook needs to read the
+   * table wrapper's natural (unclamped) offsetWidth/scrollWidth.  The
+   * outer container (.quiz-question-content / .quiz-option-content) already
+   * has overflow-x:hidden at the all-screens level (line ~255) which
+   * prevents horizontal scroll AFTER scaling is applied.
+   */
+
+  /* Reduce overall font for quiz content on mobile */
+  .quiz-content {
+    font-size: 13px;
+    /* NO max-width:100% — that would clamp inline-block wrappers */
+  }
+
+  /* Tables: keep natural width, JS auto-zooms if too wide */
+  .quiz-content table {
+    border-collapse: collapse;
+    max-width: none;
+    /* override any inherited max-width */
+  }
+
+  /* Table cells: keep readable, no forced wrapping */
+  .quiz-content table td,
+  .quiz-content table th {
+    white-space: nowrap;
+    padding: 4px 6px;
+  }
+
+  /* Stimulus box on mobile - limit height */
+  .mobile-stimulus {
+    max-height: 35vh !important;
+    overflow-y: auto;
+  }
+
+  /* Pre-formatted lines (accounting entries) */
+  .quiz-content .pre-line {
+    display: block;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 12px;
+    max-width: 100%;
+  }
+
+  /* Images: always fit container */
+  .quiz-content img,
+  .quiz-question-content img {
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 200px;
+  }
+}
+
+/* Even smaller screens */
+@media (max-width: 400px) {
+  .mobile-stimulus {
+    max-height: 30vh !important;
+  }
+
+  .quiz-content {
+    font-size: 12px;
+  }
+
+  .quiz-content .pre-line {
+    font-size: 11px;
+  }
+}
+
+/* quiz-question-content and quiz-option-content: no overflow rules here.
+   Clipping is handled by .quiz-scale-area (their parent/self) above. */

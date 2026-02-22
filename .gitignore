@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+/pnpm-lock.yaml
+/yarn.lock
+
+# Backup files
+*.bak
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables (SANGAT PENTING: Jaga rahasia database MySQL/Supabase kamu)
+.env
+.env.local
+.env.production
+.env.test
+
+# Debugging logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Prisma (Opsional: abaikan jika kamu ingin menyimpan riwayat migrasi)
+# /prisma/migrations/
+
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

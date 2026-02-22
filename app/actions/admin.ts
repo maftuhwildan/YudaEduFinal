@@ -1,0 +1,527 @@
+'use server';
+
+import { prisma } from '../lib/prisma';
+import { hash } from 'bcryptjs';
+import { requireAdmin } from '@/lib/auth-guard';
+import { randomInt } from 'crypto';
+import { logger } from '@/lib/logger';
+
+// --- Users ---
+export async function getUsers() {
+    await requireAdmin();
+    try {
+        return await prisma.user.findMany({ include: { class: true } });
+    } catch (e: any) {
+        throw new Error('Gagal memuat data pengguna.');
+    }
+}
+
+export async function createUser(data: any) {
+    await requireAdmin();
+    try {
+        const { password, ...rest } = data;
+        const hashedPassword = await hash(password || rest.passwordHash, 12);
+        const userData = { ...rest, passwordHash: hashedPassword };
+        await prisma.user.create({ data: userData });
+        return { success: true };
+    } catch (e: any) {
+        if (e.code === 'P2002') return { error: 'Username sudah digunakan.' };
+        return { error: 'Gagal membuat user. Silakan coba lagi.' };
+    }
+}
+
+export async function deleteUser(id: string) {
+    await requireAdmin();
+    try {
+        await prisma.user.delete({ where: { id } });
+        return { success: true };
+    } catch (e: any) {
+        if (e.code === 'P2003') return { error: 'User ini masih memiliki data terkait, tidak bisa dihapus.' };
+        return { error: 'Gagal menghapus user.' };
+    }
+}
+
+// Reset user attempts for a specific pack (allows retake)
+export async function resetUserAttempts(userId: string, packId: string) {
+    await requireAdmin();
+    try {
+        // Delete the completed session so user can retake
+        try {
+            await prisma.examSession.delete({
+                where: { userId_packId: { userId, packId } }
+            });
+        } catch (e) {
+            // Session may not exist, that's ok
+        }
+        // Decrement currentAttempts and increment maxAttempts to track retakes granted
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                currentAttempts: { decrement: 1 },
+                maxAttempts: { increment: 1 }
+            }
+        });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal mereset percobaan user.' };
+    }
+}
+
+// --- Classes ---
+export async function getClasses() {
+    await requireAdmin();
+    try {
+        return await prisma.classGroup.findMany();
+    } catch (e: any) {
+        throw new Error('Gagal memuat data kelas.');
+    }
+}
+
+export async function createClass(data: any) {
+    await requireAdmin();
+    try {
+        await prisma.classGroup.create({ data });
+        return { success: true };
+    } catch (e: any) {
+        if (e.code === 'P2002') return { error: 'Nama kelas sudah ada.' };
+        return { error: 'Gagal membuat kelas.' };
+    }
+}
+
+export async function deleteClass(id: string) {
+    await requireAdmin();
+    try {
+        await prisma.classGroup.delete({ where: { id } });
+        return { success: true };
+    } catch (e: any) {
+        if (e.code === 'P2003') return { error: 'Kelas masih memiliki siswa, tidak bisa dihapus.' };
+        return { error: 'Gagal menghapus kelas.' };
+    }
+}
+
+// --- Packs ---
+
+// Helper function to generate random token (cryptographically secure)
+function generateRandomToken(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from({ length: 6 }, () => chars[randomInt(chars.length)]).join('');
+}
+
+export async function getPacks() {
+    await requireAdmin();
+    try {
+        const packs = await prisma.quizPack.findMany();
+
+        // Check for auto-rotate tokens
+        const now = new Date();
+        const fiveMinutesMs = 5 * 60 * 1000;
+
+        for (const pack of packs) {
+            if (pack.autoRotateToken && pack.isActive) {
+                const lastUpdate = pack.lastTokenUpdate ? new Date(pack.lastTokenUpdate).getTime() : 0;
+                const timeSinceUpdate = now.getTime() - lastUpdate;
+
+                if (timeSinceUpdate >= fiveMinutesMs) {
+                    // Rotate the token
+                    const newToken = generateRandomToken();
+                    await prisma.quizPack.update({
+                        where: { id: pack.id },
+                        data: {
+                            token: newToken,
+                            lastTokenUpdate: now
+                        }
+                    });
+                    pack.token = newToken;
+                    pack.lastTokenUpdate = now;
+                }
+            }
+        }
+
+        return packs;
+    } catch (e: any) {
+        throw new Error('Gagal memuat data paket ujian.');
+    }
+}
+
+export async function createPack(data: any) {
+    await requireAdmin();
+    try {
+        if (data.scheduleStart) data.scheduleStart = new Date(data.scheduleStart).toISOString();
+        if (data.scheduleEnd) data.scheduleEnd = new Date(data.scheduleEnd).toISOString();
+        // Set lastTokenUpdate if autoRotateToken is enabled
+        if (data.autoRotateToken) {
+            data.lastTokenUpdate = new Date();
+        }
+        await prisma.quizPack.create({ data });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal membuat paket ujian.' };
+    }
+}
+
+export async function updatePack(data: any) {
+    await requireAdmin();
+    try {
+        const { id, ...rest } = data;
+        if (rest.scheduleStart) rest.scheduleStart = new Date(rest.scheduleStart).toISOString();
+        else if (rest.scheduleStart === '') rest.scheduleStart = null;
+
+        if (rest.scheduleEnd) rest.scheduleEnd = new Date(rest.scheduleEnd).toISOString();
+        else if (rest.scheduleEnd === '') rest.scheduleEnd = null;
+
+        await prisma.quizPack.update({ where: { id }, data: rest });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal mengupdate paket ujian.' };
+    }
+}
+
+export async function deletePack(id: string) {
+    await requireAdmin();
+    try {
+        await prisma.quizPack.delete({ where: { id } });
+        return { success: true };
+    } catch (e: any) {
+        if (e.code === 'P2003') return { error: 'Paket ujian masih memiliki data terkait.' };
+        return { error: 'Gagal menghapus paket ujian.' };
+    }
+}
+
+// --- Questions ---
+export async function getQuestions() {
+    await requireAdmin();
+    try {
+        return await prisma.question.findMany();
+    } catch (e: any) {
+        throw new Error('Gagal memuat data soal.');
+    }
+}
+
+export async function getQuestionsByPack(packId: string) {
+    await requireAdmin();
+    try {
+        return await prisma.question.findMany({ where: { packId } });
+    } catch (e: any) {
+        throw new Error('Gagal memuat soal untuk paket ini.');
+    }
+}
+
+export async function createQuestion(data: any) {
+    await requireAdmin();
+    try {
+        await prisma.question.create({ data });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal membuat soal.' };
+    }
+}
+
+export async function updateQuestion(data: any) {
+    await requireAdmin();
+    try {
+        const { id, ...rest } = data;
+        await prisma.question.update({ where: { id }, data: rest });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal mengupdate soal.' };
+    }
+}
+
+export async function deleteQuestion(id: string) {
+    await requireAdmin();
+    try {
+        await prisma.question.delete({ where: { id } });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal menghapus soal.' };
+    }
+}
+
+// --- Results ---
+export async function getAllResults() {
+    await requireAdmin();
+    try {
+        return await prisma.result.findMany();
+    } catch (e: any) {
+        throw new Error('Gagal memuat data hasil ujian.');
+    }
+}
+
+export async function getResultsByPack(packName: string) {
+    await requireAdmin();
+    try {
+        return await prisma.result.findMany({ where: { packName } });
+    } catch (e: any) {
+        throw new Error('Gagal memuat hasil ujian untuk paket ini.');
+    }
+}
+
+export async function deleteResult(id: string) {
+    await requireAdmin();
+    try {
+        await prisma.result.delete({ where: { id } });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal menghapus hasil ujian.' };
+    }
+}
+
+export async function bulkDeleteResults(ids: string[]) {
+    await requireAdmin();
+    try {
+        await prisma.result.deleteMany({ where: { id: { in: ids } } });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal menghapus hasil ujian secara massal.' };
+    }
+}
+
+// WARN-1 FIX: Batch operations instead of N+1 sequential queries
+export async function bulkResetUserAttempts(userIds: string[], packId: string) {
+    await requireAdmin();
+    try {
+        await prisma.$transaction([
+            // Batch delete all sessions at once
+            prisma.examSession.deleteMany({
+                where: { userId: { in: userIds }, packId }
+            }),
+            // Individual updates still needed for increment/decrement, but wrapped in transaction
+            ...userIds.map(userId =>
+                prisma.user.update({
+                    where: { id: userId },
+                    data: {
+                        currentAttempts: { decrement: 1 },
+                        maxAttempts: { increment: 1 }
+                    }
+                })
+            )
+        ]);
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal mereset percobaan secara massal.' };
+    }
+}
+
+// --- Analysis ---
+export async function getAnalysis(packId: string) {
+    await requireAdmin();
+    try {
+        // Get pack info
+        const pack = await prisma.quizPack.findUnique({ where: { id: packId } });
+        if (!pack) return { questions: [], summary: null };
+
+        // Get all questions for this pack
+        const questions = await prisma.question.findMany({ where: { packId } });
+
+        // Get all results for this pack (with per-question answers + user info)
+        const results = await prisma.result.findMany({
+            where: { packName: pack.name },
+            include: { user: { include: { class: true } } }
+        });
+
+        // Parse answers from each result
+        const parsedResults = results.map((r: any) => {
+            let answerMap: Record<string, string> = {};
+            if (r.answers) {
+                if (typeof r.answers === 'string') {
+                    try { answerMap = JSON.parse(r.answers); } catch (e) { }
+                } else if (typeof r.answers === 'object' && !Array.isArray(r.answers)) {
+                    const keys = Object.keys(r.answers);
+                    const isLegacy = keys.length <= 3 && keys.some(k => ['correctCount', 'totalQuestions', 'cheatCount'].includes(k));
+                    if (!isLegacy) {
+                        answerMap = r.answers as Record<string, string>;
+                    }
+                }
+            }
+            return { ...r, answerMap };
+        });
+
+        const hasRealAnswers = parsedResults.some(r => Object.keys(r.answerMap).length > 0);
+
+        // Calculate per-question statistics
+        const questionStats = questions.map((q: any) => {
+            let attempts = 0;
+            let correctCount = 0;
+            const optionCounts: Record<string, number> = {};
+
+            const opts: string[] = Array.isArray(q.options)
+                ? q.options
+                : (typeof q.options === 'string' ? (() => { try { return JSON.parse(q.options); } catch { return []; } })() : []);
+            opts.forEach((_: string, idx: number) => {
+                optionCounts[String.fromCharCode(65 + idx)] = 0;
+            });
+
+            if (hasRealAnswers) {
+                parsedResults.forEach(r => {
+                    if (r.variant === q.variant || !q.variant) {
+                        const studentAnswer = r.answerMap[q.id];
+                        if (studentAnswer !== undefined) {
+                            attempts++;
+                            if (studentAnswer === q.correctAnswer) correctCount++;
+                            const optIdx = opts.findIndex((o: string) => o === studentAnswer);
+                            if (optIdx >= 0) {
+                                const label = String.fromCharCode(65 + optIdx);
+                                optionCounts[label] = (optionCounts[label] || 0) + 1;
+                            }
+                        }
+                    }
+                });
+            } else {
+                const variantResults = parsedResults.filter(r => r.variant === q.variant || !q.variant);
+                attempts = variantResults.length;
+                const avgScore = attempts > 0
+                    ? variantResults.reduce((sum: number, r: any) => sum + r.score, 0) / attempts : 0;
+                correctCount = Math.round(attempts * (avgScore / 100));
+            }
+
+            const difficultyIndex = attempts > 0 ? correctCount / attempts : 0;
+            const correctOptIdx = opts.findIndex((o: string) => o === q.correctAnswer);
+            const correctLabel = correctOptIdx >= 0 ? String.fromCharCode(65 + correctOptIdx) : '?';
+
+            return {
+                questionId: q.id,
+                text: q.text,
+                variant: q.variant,
+                attempts,
+                correctCount,
+                difficultyIndex: parseFloat(difficultyIndex.toFixed(2)),
+                optionCounts: hasRealAnswers ? optionCounts : null,
+                correctLabel,
+                optionLabels: opts.map((_: string, idx: number) => String.fromCharCode(65 + idx))
+            };
+        });
+
+        // Summary statistics
+        const totalStudents = results.length;
+        const scores = results.map((r: any) => r.score);
+        const avgScore = totalStudents > 0
+            ? scores.reduce((sum: number, s: number) => sum + s, 0) / totalStudents : 0;
+        const highestScore = totalStudents > 0 ? Math.max(...scores) : 0;
+        const lowestScore = totalStudents > 0 ? Math.min(...scores) : 0;
+
+        // Median
+        const sortedScores = [...scores].sort((a, b) => a - b);
+        const median = totalStudents > 0
+            ? (totalStudents % 2 === 0
+                ? (sortedScores[totalStudents / 2 - 1] + sortedScores[totalStudents / 2]) / 2
+                : sortedScores[Math.floor(totalStudents / 2)])
+            : 0;
+
+        // Standard Deviation
+        const stdDev = totalStudents > 0
+            ? Math.sqrt(scores.reduce((sum: number, s: number) => sum + Math.pow(s - avgScore, 2), 0) / totalStudents) : 0;
+
+        // Score distribution
+        const distribution = {
+            excellent: results.filter((r: any) => r.score >= 90).length,
+            good: results.filter((r: any) => r.score >= 75 && r.score < 90).length,
+            average: results.filter((r: any) => r.score >= 60 && r.score < 75).length,
+            poor: results.filter((r: any) => r.score < 60).length
+        };
+
+        const passCount = results.filter((r: any) => r.score >= 75).length;
+        const passRate = totalStudents > 0 ? (passCount / totalStudents) * 100 : 0;
+
+        const avgCheatCount = totalStudents > 0
+            ? results.reduce((sum: number, r: any) => sum + (r.cheatCount || 0), 0) / totalStudents : 0;
+
+        // Per-class breakdown
+        const classMap: Record<string, { name: string; scores: number[]; passCount: number }> = {};
+        results.forEach((r: any) => {
+            const className = r.user?.class?.name || 'Unknown';
+            const classId = r.user?.classId || 'unknown';
+            if (!classMap[classId]) classMap[classId] = { name: className, scores: [], passCount: 0 };
+            classMap[classId].scores.push(r.score);
+            if (r.score >= 75) classMap[classId].passCount++;
+        });
+
+        const perClass = Object.entries(classMap).map(([classId, data]) => ({
+            classId,
+            className: data.name,
+            studentCount: data.scores.length,
+            avgScore: parseFloat((data.scores.reduce((s, v) => s + v, 0) / data.scores.length).toFixed(1)),
+            passRate: parseFloat(((data.passCount / data.scores.length) * 100).toFixed(1)),
+            highest: Math.max(...data.scores),
+            lowest: Math.min(...data.scores)
+        })).sort((a, b) => b.avgScore - a.avgScore);
+
+        // Top and bottom 5 students
+        const rankedStudents = results
+            .map((r: any) => ({
+                username: r.username,
+                fullName: r.user?.fullName || r.username,
+                className: r.user?.class?.name || '-',
+                score: r.score,
+                correctCount: r.correctCount,
+                totalQuestions: r.totalQuestions
+            }))
+            .sort((a: any, b: any) => b.score - a.score);
+
+        const topStudents = rankedStudents.slice(0, 5);
+        const bottomStudents = rankedStudents.slice(-5).reverse();
+
+        return {
+            questions: questionStats,
+            hasRealAnswers,
+            summary: {
+                packName: pack.name,
+                totalQuestions: questions.length,
+                totalStudents,
+                avgScore: parseFloat(avgScore.toFixed(1)),
+                highestScore: parseFloat(highestScore.toFixed(1)),
+                lowestScore: parseFloat(lowestScore.toFixed(1)),
+                median: parseFloat(median.toFixed(1)),
+                stdDev: parseFloat(stdDev.toFixed(1)),
+                passRate: parseFloat(passRate.toFixed(1)),
+                distribution,
+                avgCheatCount: parseFloat(avgCheatCount.toFixed(1)),
+                perClass,
+                topStudents,
+                bottomStudents
+            }
+        };
+    } catch (e: any) {
+        throw new Error('Gagal memuat data analisis.');
+    }
+}
+
+// --- Login Slides ---
+export async function getLoginSlides() {
+    await requireAdmin();
+    try {
+        return await prisma.loginSlide.findMany({ orderBy: { order: 'asc' } });
+    } catch (e: any) {
+        throw new Error('Gagal memuat data slide login.');
+    }
+}
+
+export async function createLoginSlide(data: { title?: string; description?: string; imageUrl: string; order?: number; isActive?: boolean }) {
+    await requireAdmin();
+    try {
+        await prisma.loginSlide.create({ data });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal membuat slide login.' };
+    }
+}
+
+export async function updateLoginSlide(data: { id: string; title?: string; description?: string; imageUrl?: string; order?: number; isActive?: boolean }) {
+    await requireAdmin();
+    try {
+        const { id, ...rest } = data;
+        await prisma.loginSlide.update({ where: { id }, data: rest });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal mengupdate slide login.' };
+    }
+}
+
+export async function deleteLoginSlide(id: string) {
+    await requireAdmin();
+    try {
+        await prisma.loginSlide.delete({ where: { id } });
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal menghapus slide login.' };
+    }
+}
