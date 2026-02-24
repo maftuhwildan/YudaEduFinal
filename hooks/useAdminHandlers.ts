@@ -4,9 +4,9 @@ import { useCallback, useRef, useState } from 'react';
 import { Question, QuizPack, ClassGroup } from '@/types';
 import { Role } from '@/types';
 import {
-    createUser, deleteUser,
+    createUser, deleteUser, bulkDeleteUsers,
     createClass, deleteClass,
-    createPack, updatePack, deletePack,
+    createPack, updatePack, deletePack, duplicatePack,
     getQuestionsByPack, createQuestion, updateQuestion, deleteQuestion,
 } from '@/app/actions/admin';
 import { generateQuizQuestions } from '@/app/actions/exam';
@@ -119,13 +119,15 @@ export function useAdminHandlers({
         if (!confirm(`Hapus ${ids.length} siswa yang dipilih? Tindakan ini tidak bisa dibatalkan.`)) return;
         setTabLoadingFor('USERS', true);
         try {
-            for (const id of ids) {
-                await deleteUser(id);
+            const result = await bulkDeleteUsers(ids);
+            if (result.error) {
+                alert(`Gagal: ${result.error}`);
+            } else {
+                fetchUsers(true);
             }
-            fetchUsers(true);
         } catch (e) {
             logger.error(e);
-            alert('Terjadi kesalahan saat menghapus beberapa siswa.');
+            alert('Terjadi kesalahan saat menghapus siswa.');
         } finally {
             setTabLoadingFor('USERS', false);
         }
@@ -166,20 +168,13 @@ export function useAdminHandlers({
     const handleDuplicatePack = async (pack: QuizPack) => {
         if (!confirm("Duplicate this exam pack and all its questions?")) return;
 
-        const { id, questions: qs, ...rest } = pack as any;
         const newId = generateId();
+        const newToken = generateId().substring(0, 6).toUpperCase();
+        const result = await duplicatePack(pack.id, newId, `${pack.name} (Copy)`, newToken);
 
-        await createPack({
-            ...rest,
-            id: newId,
-            name: `${pack.name} (Copy)`,
-            isActive: false,
-            token: generateId().substring(0, 6).toUpperCase()
-        });
-
-        const packQs = await getQuestionsByPack(pack.id);
-        for (const q of packQs) {
-            await createQuestion({ ...q, id: generateId(), packId: newId });
+        if (result.error) {
+            alert(`Gagal menduplikasi: ${result.error}`);
+            return;
         }
 
         fetchPacks(true);

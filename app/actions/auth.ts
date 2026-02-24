@@ -6,12 +6,16 @@ import { cookies } from 'next/headers';
 import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';
 
-// --- Rate Limiting (WARN-4) ---
+// --- Rate Limiting ---
+// NOTE: This in-memory Map is per-process. It works correctly for single-process
+// deployments (Docker single instance, PM2 single worker). For multi-process/
+// serverless deployments, replace with a shared store (Redis, Upstash, etc.).
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60 * 1000; // 60 seconds
 
 function checkRateLimit(username: string): { allowed: boolean; retryAfterMs?: number } {
+    cleanupStaleEntries(); // lazy cleanup on each check
     const now = Date.now();
     const entry = loginAttempts.get(username);
 
@@ -28,13 +32,17 @@ function checkRateLimit(username: string): { allowed: boolean; retryAfterMs?: nu
     return { allowed: true };
 }
 
-// Cleanup stale entries periodically (prevent memory leak)
-setInterval(() => {
+// Lazy cleanup: run at most once per WINDOW_MS, piggybacking on checkRateLimit calls
+// (avoids module-level setInterval that can't be cleaned up on hot-reload)
+let lastCleanup = 0;
+function cleanupStaleEntries() {
     const now = Date.now();
+    if (now - lastCleanup < WINDOW_MS) return;
+    lastCleanup = now;
     for (const [key, entry] of loginAttempts) {
         if (now > entry.resetAt) loginAttempts.delete(key);
     }
-}, 5 * 60 * 1000); // Clean every 5 minutes
+}
 
 export async function login(formData: FormData) {
     const username = formData.get('username') as string;
@@ -188,8 +196,6 @@ export async function updateAdminProfile(input: {
 
         // Update username
         if (input.username && input.username !== user.username) {
-            const existing = await prisma.user.findFirst({ where: { username: input.username } });
-            if (existing) return { error: 'Username sudah digunakan' };
             updateData.username = input.username;
         }
 
@@ -237,6 +243,8 @@ export async function updateAdminProfile(input: {
         return { success: true, user: newSessionData };
     } catch (e: any) {
         logger.error('Update profile error:', e);
-        return { error: e.message || 'Gagal mengupdate profil' };
+        // P2002 = unique constraint violation (username already taken by another user)
+        if (e.code === 'P2002') return { error: 'Username sudah digunakan' };
+        return { error: 'Gagal mengupdate profil' };
     }
 }

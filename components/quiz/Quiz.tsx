@@ -119,7 +119,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
     const { stage, availablePacks, selectedPackId, handlePackSelection,
         tokenInput, setTokenInput, errorMessage, existingSession, startQuiz,
         questions, pack, currentIndex, setCurrentIndex, answers, handleSelect,
-        cheatCount } = session;
+        cheatCount, submitFailed } = session;
 
     // --- Derived UI values ---
     const progressValue = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
@@ -462,24 +462,36 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                     </div>
 
                     {/* Footer Nav */}
-                    <div className="bg-card border-t p-4 flex justify-between shrink-0">
-                        <Button
-                            variant="ghost"
-                            onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-                            disabled={currentIndex === 0}
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2" /> Previous
-                        </Button>
-
-                        {currentIndex === questions.length - 1 ? (
-                            <Button onClick={() => setShowSubmitConfirm(true)}>
-                                Finish Exam <Flag className="w-4 h-4 ml-2" />
-                            </Button>
-                        ) : (
-                            <Button onClick={() => setCurrentIndex(prev => prev + 1)}>
-                                Next <ArrowRight className="w-4 h-4 ml-2" />
-                            </Button>
+                    <div className="bg-card border-t p-4 flex flex-col gap-2 shrink-0">
+                        {submitFailed && (
+                            <Alert variant="destructive" className="flex items-center justify-between">
+                                <AlertDescription className="text-sm font-medium">
+                                    Gagal mengirim jawaban. Jawaban tersimpan di perangkat.
+                                </AlertDescription>
+                                <Button variant="destructive" size="sm" onClick={session.executeSubmission}>
+                                    <RotateCcw className="w-4 h-4 mr-1" /> Retry Submit
+                                </Button>
+                            </Alert>
                         )}
+                        <div className="flex justify-between">
+                            <Button
+                                variant="ghost"
+                                onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                                disabled={currentIndex === 0}
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2" /> Previous
+                            </Button>
+
+                            {currentIndex === questions.length - 1 ? (
+                                <Button onClick={() => setShowSubmitConfirm(true)}>
+                                    Finish Exam <Flag className="w-4 h-4 ml-2" />
+                                </Button>
+                            ) : (
+                                <Button onClick={() => setCurrentIndex(prev => prev + 1)}>
+                                    Next <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

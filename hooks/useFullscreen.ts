@@ -28,11 +28,23 @@ export function useFullscreen() {
             elem.msRequestFullscreen;
 
         if (requestFs) {
-            requestFs.call(elem).then(() => {
+            // Note: navigationUI hint prevents some Android devices from locking to landscape automatically.
+            const p = requestFs.call(elem, elem.requestFullscreen ? { navigationUI: 'hide' } : undefined);
+            if (p && p.then) {
+                p.then(() => {
+                    setIsFullscreen(true);
+                    try {
+                        // Explicitly tell the browser allowing natural orientation
+                        if (window.screen && window.screen.orientation && window.screen.orientation.unlock) {
+                            window.screen.orientation.unlock();
+                        }
+                    } catch (e) { }
+                }).catch(() => {
+                    setIsFullscreen(true);
+                });
+            } else {
                 setIsFullscreen(true);
-            }).catch(() => {
-                setIsFullscreen(true);
-            });
+            }
         } else {
             setIsFullscreen(true);
         }

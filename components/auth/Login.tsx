@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { SessionUser } from '@/types';
 import { login } from '@/app/actions/auth';
 import { Lock, User as UserIcon, Eye, EyeOff } from 'lucide-react';
@@ -20,9 +20,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return; // guard against double-click before React re-renders
+    submittingRef.current = true;
     setError('');
     setLoading(true);
 
@@ -41,6 +44,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setError(err?.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 

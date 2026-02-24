@@ -105,7 +105,26 @@ export async function getQuizData(packId: string, userId: string, token?: string
     }
 
     if (pack.randomizeQuestions) {
-        questions = questions.sort(() => Math.random() - 0.5);
+        let savedOrder: string[] | null = null;
+        if (existingSession && existingSession.answers) {
+            const parsedAnswers = typeof existingSession.answers === 'string'
+                ? JSON.parse(existingSession.answers)
+                : existingSession.answers;
+            savedOrder = parsedAnswers._questionOrder as string[] | null;
+        }
+
+        if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
+            // Restore from saved order
+            const orderMap = new Map(savedOrder.map((id, index) => [id, index]));
+            questions = questions.sort((a: any, b: any) => {
+                const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+                const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+                return idxA - idxB;
+            });
+        } else {
+            // New session, random rotation
+            questions = questions.sort(() => Math.random() - 0.5);
+        }
     }
 
     const safeQuestions = questions.map((q: any) => {
@@ -152,52 +171,61 @@ export async function submitQuizResult(resultData: any) {
         }
         const score = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
 
-        // 2. Find active session
-        const session = await prisma.examSession.findUnique({
-            where: { userId_packId: { userId, packId } }
-        });
+        // 2. Atomic status check + complete in one transaction to prevent double submission.
+        // updateMany with status filter returns count=0 if already COMPLETED → idempotent guard.
+        let sessionData: { packName: string; variant: string } | null = null;
 
-        if (session) {
-            // Guard: prevent double submission
-            if (session.status === 'COMPLETED') {
-                return { success: true, message: 'Already completed' };
-            }
-
-            // Update session status to COMPLETED
-            await prisma.examSession.update({
-                where: { userId_packId: { userId, packId } },
+        await prisma.$transaction(async (tx) => {
+            // Atomically flip IN_PROGRESS → COMPLETED (noop if already COMPLETED)
+            const updated = await tx.examSession.updateMany({
+                where: { userId, packId, status: 'IN_PROGRESS' },
                 data: {
                     status: 'COMPLETED',
-                    score: score,
+                    score,
                     endTime: new Date(),
-                    cheatCount: cheatCount
-                }
+                    cheatCount,
+                    answers: answers || {},
+                },
             });
 
-            // 3. Also save to Result table for Admin Dashboard
-            await prisma.result.create({
+            if (updated.count === 0) {
+                // Already completed — fetch to confirm (could be expired by lazy expiry)
+                const existing = await tx.examSession.findUnique({
+                    where: { userId_packId: { userId, packId } },
+                    select: { status: true },
+                });
+                if (existing?.status === 'COMPLETED') return; // Idempotent — already done
+                throw new Error("Active exam session not found.");
+            }
+
+            // Fetch session metadata needed for Result row
+            const sess = await tx.examSession.findUnique({
+                where: { userId_packId: { userId, packId } },
+                select: { packName: true, variant: true },
+            });
+            sessionData = sess;
+
+            // 3. Save to Result table
+            await tx.result.create({
                 data: {
-                    userId: userId,
+                    userId,
                     username: user.username,
                     classId: user.classId,
-                    score: score,
-                    correctCount: correctCount,
-                    totalQuestions: totalQuestions,
-                    packName: session.packName || 'Unknown Exam',
-                    variant: session.variant || 'A',
-                    cheatCount: cheatCount,
-                    answers: answers || {}
-                }
+                    score,
+                    correctCount,
+                    totalQuestions,
+                    packName: sess?.packName || 'Unknown Exam',
+                    variant: sess?.variant || 'A',
+                    cheatCount,
+                    answers: answers || {},
+                },
             });
 
-        } else {
-            throw new Error("Active exam session not found.");
-        }
-
-        // Update jumlah percobaan user
-        await prisma.user.update({
-            where: { id: userId },
-            data: { currentAttempts: { increment: 1 } }
+            // 4. Increment attempt counter
+            await tx.user.update({
+                where: { id: userId },
+                data: { currentAttempts: { increment: 1 } },
+            });
         });
 
         return { success: true, score, correctCount, totalQuestions };

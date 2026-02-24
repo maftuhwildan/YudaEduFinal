@@ -40,46 +40,62 @@ export async function updateSession(data: any) {
     const caller = await requireAuth();
     // Ownership: only allow updating your own session
     if (caller.id !== data.userId && caller.role !== 'ADMIN') throw new Error('Forbidden');
-    const { userId, packId, packName, username, fullName, classId, currentQuestionIndex, answeredCount, totalQuestions, cheatCount, variant, answers } = data;
-
-    // Check if session exists
-    const existing = await prisma.examSession.findUnique({
-        where: { userId_packId: { userId, packId } }
-    });
+    const { userId, packId, packName, username, fullName, classId, currentQuestionIndex, answeredCount, totalQuestions, cheatCount, variant, answers, isHeartbeatOnly, questionOrder } = data;
 
     const now = BigInt(Date.now());
 
-    if (existing) {
-        await prisma.examSession.update({
-            where: { userId_packId: { userId, packId } },
-            data: {
-                currentQuestionIndex,
-                answeredCount,
-                lastUpdate: now,
-                cheatCount,
-                answers: answers || existing.answers
-            }
+    // Heartbeat-only: just bump lastUpdate if session exists
+    if (isHeartbeatOnly) {
+        const updated = await prisma.examSession.updateMany({
+            where: { userId, packId, status: 'IN_PROGRESS' },
+            data: { lastUpdate: now }
         });
-    } else {
-        await prisma.examSession.create({
-            data: {
-                userId,
-                packId,
-                packName,
-                username,
-                fullName: fullName || username || 'Unknown', // Fallback
-                classId,
-                variant: variant || 'A',
-                startTime: now,
-                lastUpdate: now,
-                currentQuestionIndex,
-                answeredCount,
-                totalQuestions,
-                cheatCount,
-                answers: answers || {}
-            }
-        });
+        if (updated.count === 0) {
+            // Session missing — signal client to send a full sync
+            return { success: false, sessionMissing: true };
+        }
+        return { success: true };
     }
+
+    // Full update: use upsert to avoid race condition on concurrent requests
+    // (e.g. double-click or network retry hitting the server twice simultaneously)
+    const initialAnswers: any = answers || {};
+    if (questionOrder) {
+        initialAnswers._questionOrder = questionOrder;
+    }
+
+    // Guard: only update answers in DB if the incoming payload actually has answer data.
+    // This prevents an accidental empty `answers: {}` from overwriting existing answers.
+    const incomingAnswerKeys = Object.keys(answers || {}).filter(k => !k.startsWith('_'));
+    const shouldUpdateAnswers = incomingAnswerKeys.length > 0 || questionOrder;
+
+    await prisma.examSession.upsert({
+        where: { userId_packId: { userId, packId } },
+        update: {
+            currentQuestionIndex: currentQuestionIndex ?? 0,
+            answeredCount: answeredCount ?? 0,
+            lastUpdate: now,
+            cheatCount: cheatCount ?? 0,
+            answers: shouldUpdateAnswers ? initialAnswers : undefined,
+        },
+        create: {
+            userId,
+            packId,
+            packName,
+            username,
+            fullName: fullName || username || 'Unknown',
+            classId,
+            variant: variant || 'A',
+            startTime: now,
+            lastUpdate: now,
+            currentQuestionIndex: currentQuestionIndex || 0,
+            answeredCount: answeredCount || 0,
+            totalQuestions: totalQuestions || 0,
+            cheatCount: cheatCount || 0,
+            answers: initialAnswers,
+        },
+    });
+
     return { success: true };
 }
 
@@ -107,11 +123,11 @@ export async function expireSessionIfOverdue(session: any): Promise<boolean> {
         where: { packId: packMeta.id }
     });
 
-    let correct = 0;
     const savedAnswers = typeof session.answers === 'string'
         ? JSON.parse(session.answers)
         : (session.answers as Record<string, string>) || {};
 
+    let correct = 0;
     questions.forEach((q: any) => {
         if (savedAnswers[q.id] === q.correctAnswer) correct++;
     });
@@ -119,20 +135,24 @@ export async function expireSessionIfOverdue(session: any): Promise<boolean> {
     const totalQuestions = session.totalQuestions || questions.length;
     const finalScore = totalQuestions > 0 ? (correct / totalQuestions) * 100 : 0;
 
-    // Mark session as COMPLETED (preserve original answers)
-    await prisma.examSession.update({
-        where: { userId_packId: { userId: session.userId, packId: session.packId } },
-        data: {
-            status: 'COMPLETED',
-            score: finalScore,
-            endTime: new Date()
-        }
-    });
-
-    // Save result
+    // Atomic: flip IN_PROGRESS → COMPLETED only once, even if called concurrently
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
-    if (user) {
-        await prisma.result.create({
+    if (!user) return false;
+
+    await prisma.$transaction(async (tx) => {
+        const updated = await tx.examSession.updateMany({
+            where: {
+                userId: session.userId,
+                packId: session.packId,
+                status: 'IN_PROGRESS',
+            },
+            data: { status: 'COMPLETED', score: finalScore, endTime: new Date() },
+        });
+
+        // count === 0 means another concurrent call already completed it — skip
+        if (updated.count === 0) return;
+
+        await tx.result.create({
             data: {
                 userId: session.userId,
                 username: user.username,
@@ -143,15 +163,15 @@ export async function expireSessionIfOverdue(session: any): Promise<boolean> {
                 packName: session.packName || 'Unknown Exam',
                 variant: session.variant || 'A',
                 cheatCount: session.cheatCount,
-                answers: savedAnswers
-            }
+                answers: savedAnswers,
+            },
         });
 
-        await prisma.user.update({
+        await tx.user.update({
             where: { id: session.userId },
-            data: { currentAttempts: { increment: 1 } }
+            data: { currentAttempts: { increment: 1 } },
         });
-    }
+    });
 
     return true;
 }

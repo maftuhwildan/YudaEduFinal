@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface UseQuizTimerOptions {
     active: boolean;          // Whether the timer should be running (stage === 'QUIZ')
@@ -9,6 +9,27 @@ interface UseQuizTimerOptions {
 
 export function useQuizTimer({ active, onExpire }: UseQuizTimerOptions) {
     const [timeLeft, setTimeLeft] = useState(0);
+    const expiredRef = useRef(false);
+    const onExpireRef = useRef(onExpire);
+    // Guard: only allow expiration after timeLeft has been set to > 0 at least once.
+    // This prevents the default value of 0 from triggering auto-submit on initial render.
+    const hasBeenSetRef = useRef(false);
+
+    // Keep ref current without re-triggering effects
+    useEffect(() => { onExpireRef.current = onExpire; }, [onExpire]);
+
+    // Reset guards when a new quiz session starts (active flips false → true)
+    useEffect(() => {
+        if (active) {
+            expiredRef.current = false;
+            hasBeenSetRef.current = false;
+        }
+    }, [active]);
+
+    // Track when timeLeft has genuinely been set (> 0)
+    useEffect(() => {
+        if (timeLeft > 0) hasBeenSetRef.current = true;
+    }, [timeLeft]);
 
     // Countdown interval
     useEffect(() => {
@@ -27,12 +48,13 @@ export function useQuizTimer({ active, onExpire }: UseQuizTimerOptions) {
         return () => clearInterval(timer);
     }, [active]);
 
-    // Trigger auto-submit when time expires
+    // Trigger auto-submit exactly once when time reaches 0
+    // Only if timer has been genuinely loaded (hasBeenSetRef prevents premature fire)
     useEffect(() => {
-        if (active && timeLeft === 0) {
-            onExpire();
+        if (active && timeLeft === 0 && !expiredRef.current && hasBeenSetRef.current) {
+            expiredRef.current = true;
+            onExpireRef.current();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeLeft, active]);
 
     return { timeLeft, setTimeLeft };

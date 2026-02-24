@@ -3,7 +3,7 @@
 import { prisma } from '../lib/prisma';
 import { hash } from 'bcryptjs';
 import { requireAdmin } from '@/lib/auth-guard';
-import { randomInt } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';
 
 // --- Users ---
@@ -38,6 +38,21 @@ export async function deleteUser(id: string) {
     } catch (e: any) {
         if (e.code === 'P2003') return { error: 'User ini masih memiliki data terkait, tidak bisa dihapus.' };
         return { error: 'Gagal menghapus user.' };
+    }
+}
+
+export async function bulkDeleteUsers(ids: string[]) {
+    await requireAdmin();
+    try {
+        await prisma.$transaction([
+            // Delete related sessions first to avoid FK constraint errors
+            prisma.examSession.deleteMany({ where: { userId: { in: ids } } }),
+            prisma.result.deleteMany({ where: { userId: { in: ids } } }),
+            prisma.user.deleteMany({ where: { id: { in: ids } } }),
+        ]);
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal menghapus siswa secara massal.' };
     }
 }
 
@@ -122,17 +137,33 @@ export async function getPacks() {
                 const timeSinceUpdate = now.getTime() - lastUpdate;
 
                 if (timeSinceUpdate >= fiveMinutesMs) {
-                    // Rotate the token
+                    // Atomic token rotation: conditional update only succeeds for the first
+                    // concurrent caller (WHERE lastTokenUpdate = old value prevents double-rotate)
                     const newToken = generateRandomToken();
-                    await prisma.quizPack.update({
-                        where: { id: pack.id },
-                        data: {
-                            token: newToken,
-                            lastTokenUpdate: now
-                        }
+                    const rotated = await prisma.quizPack.updateMany({
+                        where: {
+                            id: pack.id,
+                            lastTokenUpdate: pack.lastTokenUpdate, // must still match current DB value
+                        },
+                        data: { token: newToken, lastTokenUpdate: now },
                     });
-                    pack.token = newToken;
-                    pack.lastTokenUpdate = now;
+                    if (rotated.count > 0) {
+                        pack.token = newToken;
+                        pack.lastTokenUpdate = now;
+                    }
+                    // If count === 0, another request already rotated — pack.token stays
+                    // as the value from the initial findMany (which may be stale).
+                    // Re-fetch to get the current token.
+                    else {
+                        const fresh = await prisma.quizPack.findUnique({
+                            where: { id: pack.id },
+                            select: { token: true, lastTokenUpdate: true },
+                        });
+                        if (fresh) {
+                            pack.token = fresh.token;
+                            pack.lastTokenUpdate = fresh.lastTokenUpdate;
+                        }
+                    }
                 }
             }
         }
@@ -173,6 +204,41 @@ export async function updatePack(data: any) {
         return { success: true };
     } catch (e: any) {
         return { error: 'Gagal mengupdate paket ujian.' };
+    }
+}
+
+export async function duplicatePack(sourcePackId: string, newPackId: string, newName: string, newToken: string) {
+    await requireAdmin();
+    try {
+        const sourcePack = await prisma.quizPack.findUnique({ where: { id: sourcePackId } });
+        if (!sourcePack) return { error: 'Pack sumber tidak ditemukan.' };
+
+        const sourceQuestions = await prisma.question.findMany({ where: { packId: sourcePackId } });
+
+        const { id: _id, ...packData } = sourcePack as any;
+
+        await prisma.$transaction([
+            prisma.quizPack.create({
+                data: {
+                    ...packData,
+                    id: newPackId,
+                    name: newName,
+                    isActive: false,
+                    token: newToken,
+                    lastTokenUpdate: null,
+                },
+            }),
+            ...sourceQuestions.map((q: any) => {
+                const { id: _qid, packId: _packId, ...qData } = q;
+                return prisma.question.create({
+                    data: { ...qData, id: randomUUID(), packId: newPackId },
+                });
+            }),
+        ]);
+
+        return { success: true };
+    } catch (e: any) {
+        return { error: 'Gagal menduplikasi paket ujian.' };
     }
 }
 
