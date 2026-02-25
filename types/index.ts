@@ -66,6 +66,7 @@ export interface Result {
   variant: string;
   timestamp: string;
   cheatCount: number; // Number of tab switches/blur events
+  answers?: Record<string, string>; // Per-question answers
 }
 
 // Live Monitoring Session

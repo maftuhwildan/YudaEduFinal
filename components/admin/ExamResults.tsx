@@ -151,6 +151,13 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                 'Score': Math.round((Number(r.score) + Number.EPSILON) * 100) / 100,
                 'Correct': Number(r.correctCount) || 0,
                 'Total Questions': Number(r.totalQuestions) || 0,
+                'Answered': (() => {
+                    const ans = r.answers;
+                    if (ans && typeof ans === 'object' && !Array.isArray(ans)) {
+                        return Object.keys(ans).filter(k => !k.startsWith('_')).length;
+                    }
+                    return 0;
+                })(),
                 'Pack Name': r.packName,
                 'Variant': r.variant || 'A',
                 'Timestamp': safariSafeDate(r.timestamp).toLocaleString(),
@@ -396,6 +403,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                     <TableHead>Class</TableHead>
                                     <TableHead>Var</TableHead>
                                     <TableHead>Score</TableHead>
+                                    <TableHead>Dijawab</TableHead>
                                     <TableHead>Flags</TableHead>
                                     <TableHead className="text-right">Date</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -468,6 +476,21 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                                         {Number(r.score).toFixed(2)}
                                                     </Badge>
                                                 </TableCell>
+                                                <TableCell className="font-mono text-sm">
+                                                    {(() => {
+                                                        const ans = r.answers;
+                                                        let answered = 0;
+                                                        if (ans && typeof ans === 'object' && !Array.isArray(ans)) {
+                                                            answered = Object.keys(ans).filter(k => !k.startsWith('_')).length;
+                                                        }
+                                                        const total = r.totalQuestions || 0;
+                                                        return (
+                                                            <span className={answered < total ? 'text-amber-600 font-bold' : 'text-muted-foreground'}>
+                                                                {answered} / {total}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </TableCell>
                                                 <TableCell className="text-muted-foreground">{r.cheatCount > 0 ? `${r.cheatCount} Flags` : '-'}</TableCell>
                                                 <TableCell className="text-right text-xs text-muted-foreground">
                                                     {safariSafeDate(r.timestamp).toLocaleString()}
@@ -533,7 +556,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                     })}
                                 {filteredResults.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={11} className="text-center py-12 text-muted-foreground italic">
+                                        <TableCell colSpan={12} className="text-center py-12 text-muted-foreground italic">
                                             {packResults.length === 0 ? 'No results found for this exam pack.' : 'Tidak ada hasil untuk kelas ini.'}
                                         </TableCell>
                                     </TableRow>

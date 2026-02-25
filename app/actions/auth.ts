@@ -2,7 +2,7 @@
 
 import { prisma } from '../lib/prisma';
 import { compare, hash } from 'bcryptjs';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';
 
@@ -56,16 +56,33 @@ export async function login(formData: FormData) {
     }
 
     try {
+        // Get client IP for logging (from Nginx x-forwarded-for header)
+        const headersList = await headers();
+        const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+            || headersList.get('x-real-ip')
+            || 'unknown';
+
         const user = await prisma.user.findFirst({
             where: { username },
             include: { class: true }
         });
 
-        if (!user) return { error: 'Invalid credentials' };
+        if (!user) {
+            logger.warn(`[LOGIN FAILED] username=${username} ip=${ip} reason=user_not_found`);
+            return { error: 'Invalid credentials' };
+        }
 
         // Verify password using bcrypt compare
         const isPasswordValid = await compare(password, user.passwordHash);
-        if (!isPasswordValid) return { error: 'Invalid credentials' };
+        if (!isPasswordValid) {
+            logger.warn(`[LOGIN FAILED] username=${username} ip=${ip} reason=wrong_password`);
+            return { error: 'Invalid credentials' };
+        }
+
+        // Log if this login will kick an existing session
+        if (user.sessionToken) {
+            logger.info(`[SESSION KICK] username=${username} ip=${ip} old_session_overwritten`);
+        }
 
         // Generate unique session token — overwrites any previous token,
         // kicking out the old device on its next request
@@ -74,6 +91,8 @@ export async function login(formData: FormData) {
             where: { id: user.id },
             data: { sessionToken }
         });
+
+        logger.info(`[LOGIN OK] username=${username} ip=${ip} role=${user.role}`);
 
         const sessionData = {
             sessionToken,

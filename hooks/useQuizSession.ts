@@ -56,6 +56,7 @@ export function useQuizSession({
     const isSubmittingRef = useRef(false);
     const kickedRef = useRef(false);
     const [submitFailed, setSubmitFailed] = useState(false);
+    const [submitRetryCount, setSubmitRetryCount] = useState(0);
     const answersRef = useRef(answers);
     const currentIndexRef = useRef(currentIndex);
     const cheatCountRef = useRef(cheatCount);
@@ -189,7 +190,7 @@ export function useQuizSession({
                 fullName: user.fullName || user.username,
                 classId: user.classId,
                 currentQuestionIndex: initialIndex,
-                answeredCount: Object.keys(initialAnswers).length,
+                answeredCount: Object.keys(initialAnswers).filter(k => !k.startsWith('_')).length,
                 totalQuestions: q.length,
                 cheatCount: 0,
                 variant: (q as any)[0]?.variant || 'A',
@@ -225,6 +226,7 @@ export function useQuizSession({
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         setSubmitFailed(false);
+        setSubmitRetryCount(0);
 
         // Persist answers to localStorage before attempting submit
         if (pack?.id) backupAnswers(pack.id, answersRef.current);
@@ -267,6 +269,7 @@ export function useQuizSession({
                     isSubmittingRef.current = false;
                 } else {
                     // Wait before retrying (increasing backoff)
+                    setSubmitRetryCount(attempt);
                     await new Promise(res => setTimeout(res, BACKOFF_SCHEDULE[attempt - 1] || 5000));
                 }
             }
@@ -299,7 +302,7 @@ export function useQuizSession({
                     fullName: user.fullName || user.username,
                     classId: user.classId,
                     currentQuestionIndex: currentIndexRef.current,
-                    answeredCount: Object.keys(answersRef.current).length,
+                    answeredCount: Object.keys(answersRef.current).filter(k => !k.startsWith('_')).length,
                     totalQuestions: questions.length,
                     cheatCount: cheatCountRef.current,
                     variant: questions[0]?.variant || 'A',
@@ -368,5 +371,6 @@ export function useQuizSession({
         // Submission
         executeSubmission,
         submitFailed,
+        submitRetryCount,
     };
 }

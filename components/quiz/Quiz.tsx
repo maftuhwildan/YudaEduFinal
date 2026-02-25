@@ -119,7 +119,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
     const { stage, availablePacks, selectedPackId, handlePackSelection,
         tokenInput, setTokenInput, errorMessage, existingSession, startQuiz,
         questions, pack, currentIndex, setCurrentIndex, answers, handleSelect,
-        cheatCount, submitFailed } = session;
+        cheatCount, submitFailed, submitRetryCount } = session;
 
     // --- Derived UI values ---
     const progressValue = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
@@ -463,6 +463,14 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
 
                     {/* Footer Nav */}
                     <div className="bg-card border-t p-4 flex flex-col gap-2 shrink-0">
+                        {submitRetryCount > 0 && !submitFailed && (
+                            <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-300">
+                                <AlertDescription className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                                    <RotateCcw className="w-4 h-4 animate-spin" />
+                                    Mengirim jawaban... (percobaan ke-{submitRetryCount + 1}, mohon tunggu)
+                                </AlertDescription>
+                            </Alert>
+                        )}
                         {submitFailed && (
                             <Alert variant="destructive" className="flex items-center justify-between">
                                 <AlertDescription className="text-sm font-medium">
