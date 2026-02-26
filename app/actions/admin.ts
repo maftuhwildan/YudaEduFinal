@@ -103,6 +103,17 @@ export async function createClass(data: any) {
     }
 }
 
+export async function updateClass(id: string, name: string) {
+    await requireAdmin();
+    try {
+        await prisma.classGroup.update({ where: { id }, data: { name } });
+        return { success: true };
+    } catch (e: any) {
+        if (e.code === 'P2002') return { error: 'Nama kelas sudah ada.' };
+        return { error: 'Gagal mengupdate kelas.' };
+    }
+}
+
 export async function deleteClass(id: string) {
     await requireAdmin();
     try {

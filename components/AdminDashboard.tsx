@@ -81,7 +81,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     // UI State
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    
+
     // Global Confirmation Dialog State
     const [confirmState, setConfirmState] = useState<{
         isOpen: boolean;
@@ -89,7 +89,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
         message: string;
         onConfirm: () => void | Promise<void>;
         isLoading?: boolean;
-    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
     const requireConfirm = useCallback((title: string, message: string, onConfirm: () => void | Promise<void>) => {
         setConfirmState({ isOpen: true, title, message, onConfirm, isLoading: false });
@@ -472,13 +472,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                         </Button>
                         <h1 className="text-lg md:text-xl font-semibold">
                             {activeTab === 'CLASSES' ? 'Kelas' :
-                             activeTab === 'USERS' ? 'Siswa' :
-                             activeTab === 'PACKS' ? 'Paket Ujian' :
-                             activeTab === 'QUESTIONS' ? 'Bank Soal' :
-                             activeTab === 'MONITORING' ? 'Monitoring' :
-                             activeTab === 'RESULTS' ? 'Hasil Ujian' :
-                             activeTab === 'ANALYSIS' ? 'Analisis' :
-                             activeTab === 'SLIDES' ? 'Login Slider' : activeTab}
+                                activeTab === 'USERS' ? 'Siswa' :
+                                    activeTab === 'PACKS' ? 'Paket Ujian' :
+                                        activeTab === 'QUESTIONS' ? 'Bank Soal' :
+                                            activeTab === 'MONITORING' ? 'Monitoring' :
+                                                activeTab === 'RESULTS' ? 'Hasil Ujian' :
+                                                    activeTab === 'ANALYSIS' ? 'Analisis' :
+                                                        activeTab === 'SLIDES' ? 'Login Slider' : activeTab}
                         </h1>
                     </div>
                     <div className="flex items-center gap-2">
@@ -505,6 +505,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                                 setNewClassName={handlers.setNewClassName}
                                 handleCreateClass={handlers.handleCreateClass}
                                 handleDeleteClass={handlers.handleDeleteClass}
+                                editingClassId={handlers.editingClassId}
+                                editClassName={handlers.editClassName}
+                                setEditClassName={handlers.setEditClassName}
+                                handleStartEditClass={handlers.handleStartEditClass}
+                                handleSaveEditClass={handlers.handleSaveEditClass}
+                                handleCancelEditClass={handlers.handleCancelEditClass}
                             />
                         </TabsContent>
 

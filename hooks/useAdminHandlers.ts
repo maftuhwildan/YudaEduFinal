@@ -5,7 +5,7 @@ import { Question, QuizPack, ClassGroup } from '@/types';
 import { Role } from '@/types';
 import {
     createUser, deleteUser, bulkDeleteUsers,
-    createClass, deleteClass,
+    createClass, updateClass, deleteClass,
     createPack, updatePack, deletePack, duplicatePack,
     getQuestionsByPack, createQuestion, updateQuestion, deleteQuestion,
 } from '@/app/actions/admin';
@@ -81,6 +81,8 @@ export function useAdminHandlers({
 
     // Class State
     const [newClassName, setNewClassName] = useState('');
+    const [editingClassId, setEditingClassId] = useState<string | null>(null);
+    const [editClassName, setEditClassName] = useState('');
 
     // AI Generation State
     const [genTopic, setGenTopic] = useState('');
@@ -110,6 +112,24 @@ export function useAdminHandlers({
                 fetchClasses(true);
             }
         );
+    };
+
+    const handleStartEditClass = (cls: ClassGroup) => {
+        setEditingClassId(cls.id);
+        setEditClassName(cls.name);
+    };
+
+    const handleSaveEditClass = async () => {
+        if (!editingClassId || !editClassName) return;
+        await updateClass(editingClassId, editClassName);
+        setEditingClassId(null);
+        setEditClassName('');
+        fetchClasses(true);
+    };
+
+    const handleCancelEditClass = () => {
+        setEditingClassId(null);
+        setEditClassName('');
     };
 
     // --- User Management ---
@@ -430,7 +450,8 @@ export function useAdminHandlers({
     return {
         // Class handlers
         newClassName, setNewClassName,
-        handleCreateClass, handleDeleteClass,
+        editingClassId, editClassName, setEditClassName,
+        handleCreateClass, handleDeleteClass, handleStartEditClass, handleSaveEditClass, handleCancelEditClass,
         // User handlers
         showUserModal, setShowUserModal,
         userForm, setUserForm,
