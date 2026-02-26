@@ -11,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
     title: 'YudaEdu',
-    description: 'Your Ultimate Digital Assessment',
+    description: 'Sistem Ujian Digital Interaktif',
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en" suppressHydrationWarning>
+        <html lang="id" suppressHydrationWarning>
             <body
                 className={cn(
                     'bg-background font-sans antialiased',

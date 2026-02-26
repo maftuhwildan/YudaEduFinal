@@ -67,28 +67,28 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Dices className="w-5 h-5 text-primary" />
-                        {packForm.id ? 'Edit Exam' : 'Exam Configuration'}
+                        {packForm.id ? 'Edit Ujian' : 'Konfigurasi Ujian'}
                     </CardTitle>
                     {packForm.id && (
-                        <CardDescription>Editing: <strong>{packForm.name}</strong></CardDescription>
+                        <CardDescription>Mengedit: <strong>{packForm.name}</strong></CardDescription>
                     )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label>Exam Name</Label>
-                        <Input value={packForm.name} onChange={e => setPackForm({ ...packForm, name: e.target.value })} placeholder="e.g. Final Semester Economics" />
+                        <Label>Nama Ujian</Label>
+                        <Input value={packForm.name} onChange={e => setPackForm({ ...packForm, name: e.target.value })} placeholder="Cth. Ujian Akhir Semester" />
                     </div>
 
                     <div className="flex gap-4">
                         <div className="flex-1 space-y-2">
-                            <Label>Time (Min)</Label>
+                            <Label>Waktu (Menit)</Label>
                             <Input type="number" value={packForm.timeLimit} onChange={e => setPackForm({ ...packForm, timeLimit: parseInt(e.target.value) || 0 })} />
                         </div>
                         <div className="flex-1 space-y-2">
-                            <Label>Initial Token</Label>
+                            <Label>Token Awal</Label>
                             <div className="flex gap-2">
                                 <Input value={packForm.token} onChange={e => setPackForm({ ...packForm, token: e.target.value.toUpperCase() })} placeholder="SECRET" className="uppercase font-mono tracking-wider" />
-                                <Button variant="outline" size="icon" onClick={handleGenerateToken} title="Randomize Token">
+                                <Button variant="outline" size="icon" onClick={handleGenerateToken} title="Acak Token">
                                     <Key className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -96,7 +96,7 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Start Time (Optional)</Label>
+                        <Label>Waktu Mulai (Opsional)</Label>
                         <DateTimePicker
                             value={packForm.scheduleStart || ''}
                             onChange={v => setPackForm({ ...packForm, scheduleStart: v })}
@@ -105,7 +105,7 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                        <Label>End Time (Optional)</Label>
+                        <Label>Waktu Selesai (Opsional)</Label>
                         <DateTimePicker
                             value={packForm.scheduleEnd || ''}
                             onChange={v => setPackForm({ ...packForm, scheduleEnd: v })}
@@ -114,7 +114,7 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Assign Classes</Label>
+                        <Label>Pilih Kelas</Label>
                         <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
                             {classes.map(c => (
                                 <div key={c.id} className="flex items-center gap-2 p-1 hover:bg-muted rounded">
@@ -126,7 +126,7 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                                     <Label htmlFor={`class-${c.id}`} className="text-sm cursor-pointer font-normal">{c.name}</Label>
                                 </div>
                             ))}
-                            {classes.length === 0 && <p className="text-xs text-muted-foreground p-1">No classes available.</p>}
+                            {classes.length === 0 && <p className="text-xs text-muted-foreground p-1">Tidak ada kelas tersedia.</p>}
                         </div>
                     </div>
 
@@ -134,22 +134,22 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-xs">Auto-Rotate Token (Every 5m)</Label>
+                            <Label className="text-xs">Rotasi Token Otomatis (Tiap 5m)</Label>
                             <Switch checked={packForm.autoRotateToken} onCheckedChange={c => setPackForm({ ...packForm, autoRotateToken: c })} />
                         </div>
                         <div className="flex items-center justify-between">
-                            <Label className="text-xs">Randomize Question Order</Label>
+                            <Label className="text-xs">Acak Urutan Soal</Label>
                             <Switch checked={packForm.randomizeQuestions} onCheckedChange={c => setPackForm({ ...packForm, randomizeQuestions: c })} />
                         </div>
                         <div className="flex items-center justify-between">
-                            <Label className="text-xs">Randomize Answer Options</Label>
+                            <Label className="text-xs">Acak Pilihan Jawaban</Label>
                             <Switch checked={packForm.randomizeOptions} onCheckedChange={c => setPackForm({ ...packForm, randomizeOptions: c })} />
                         </div>
                     </div>
 
                     <div className="flex gap-2">
                         <Button onClick={handleSavePack} className="flex-1">
-                            {packForm.id ? 'Update Exam' : 'Create Exam'}
+                            {packForm.id ? 'Perbarui Ujian' : 'Buat Ujian'}
                         </Button>
                         {packForm.id && (
                             <Button variant="outline" onClick={handleCancelEdit}>
@@ -165,7 +165,7 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                     <Card className="border-dashed">
                         <CardContent className="text-center py-12">
                             <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                            <p className="text-muted-foreground">No exams created yet.</p>
+                            <p className="text-muted-foreground">Belum ada ujian yang dibuat.</p>
                         </CardContent>
                     </Card>
                 ) : (
@@ -181,15 +181,15 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                                                 <Key className="w-3 h-3" /> Token: <code className="font-mono font-bold bg-muted px-1 rounded">{p.token || 'NONE'}</code>
                                                 {p.autoRotateToken && <span className="text-[10px] text-orange-500 ml-1">(Auto)</span>}
                                             </span>
-                                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {p.timeLimit} mins</span>
+                                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {p.timeLimit} menit</span>
                                             {p.scheduleStart && (<span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {safariSafeDate(p.scheduleStart).toLocaleDateString()}</span>)}
                                             <span className="flex items-center gap-1">
                                                 <School className="w-3 h-3" />
-                                                {p.allowedClassIds && p.allowedClassIds.length > 0 ? `${(p.allowedClassIds as string[]).length} Classes` : 'All Classes'}
+                                                {p.allowedClassIds && p.allowedClassIds.length > 0 ? `${(p.allowedClassIds as string[]).length} Kelas` : 'Semua Kelas'}
                                             </span>
                                         </CardDescription>
                                     </div>
-                                    <Badge variant={p.isActive ? "default" : "secondary"}>{p.isActive ? 'ACTIVE' : 'INACTIVE'}</Badge>
+                                    <Badge variant={p.isActive ? "default" : "secondary"}>{p.isActive ? 'AKTIF' : 'NONAKTIF'}</Badge>
                                 </div>
                             </CardHeader>
                             <CardContent>
@@ -199,7 +199,7 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                                         <Download className="w-3 h-3 mr-1" /> Import Soal
                                     </Button>
                                     <Button variant="outline" size="sm" onClick={() => handleDuplicatePack(p)}>
-                                        <Copy className="w-3 h-3 mr-1" /> Duplicate
+                                        <Copy className="w-3 h-3 mr-1" /> Duplikat
                                     </Button>
                                     <Button variant="outline" size="sm" onClick={() => {
                                         setPackForm({
@@ -220,7 +220,7 @@ export const ExamPacks: React.FC<ExamPacksProps> = ({
                                         <Edit2 className="w-3 h-3 mr-1" /> Edit
                                     </Button>
                                     <Button variant={p.isActive ? "outline" : "default"} size="sm" onClick={() => handleToggleActive(p)}>
-                                        <Key className="w-3 h-3 mr-1" /> {p.isActive ? 'Deactivate' : 'Activate'}
+                                        <Key className="w-3 h-3 mr-1" /> {p.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                                     </Button>
                                     <Button variant="destructive" size="sm" onClick={() => handleDeletePack(p.id)}>
                                         <Trash2 className="w-3 h-3" />

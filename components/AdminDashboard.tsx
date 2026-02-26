@@ -343,14 +343,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                 {/* Navigation */}
                 <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
                     {[
-                        { id: 'CLASSES', label: 'Classes', icon: FolderOpen },
-                        { id: 'USERS', label: 'Users', icon: UsersIcon },
-                        { id: 'PACKS', label: 'Exam Packs', icon: Layers },
-                        { id: 'QUESTIONS', label: 'Questions', icon: FileQuestion },
+                        { id: 'CLASSES', label: 'Kelas', icon: FolderOpen },
+                        { id: 'USERS', label: 'Siswa', icon: UsersIcon },
+                        { id: 'PACKS', label: 'Paket Ujian', icon: Layers },
+                        { id: 'QUESTIONS', label: 'Bank Soal', icon: FileQuestion },
                         { id: 'MONITORING', label: 'Monitoring', icon: Activity },
-                        { id: 'RESULTS', label: 'Results', icon: Eye },
-                        { id: 'ANALYSIS', label: 'Analysis', icon: BarChart3 },
-                        { id: 'SLIDES', label: 'Login Slides', icon: Monitor },
+                        { id: 'RESULTS', label: 'Hasil Ujian', icon: Eye },
+                        { id: 'ANALYSIS', label: 'Analisis', icon: BarChart3 },
+                        { id: 'SLIDES', label: 'Login Slider', icon: Monitor },
                     ].map((item) => (
                         <Button
                             key={item.id}
@@ -401,7 +401,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                             size="icon"
                             onClick={onLogout}
                             className={`hover:text-destructive ${sidebarCollapsed && !mobileMenuOpen ? 'hidden' : ''}`}
-                            title="Logout"
+                            title="Keluar"
                         >
                             <LogOut className="w-4 h-4" />
                         </Button>
@@ -412,7 +412,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                             size="icon"
                             onClick={onLogout}
                             className="w-full mt-2 hover:text-destructive hidden md:flex"
-                            title="Logout"
+                            title="Keluar"
                         >
                             <LogOut className="w-4 h-4" />
                         </Button>
@@ -443,7 +443,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                         >
                             {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
                         </Button>
-                        <h1 className="text-lg md:text-xl font-semibold capitalize">{activeTab.toLowerCase().replace('_', ' ')}</h1>
+                        <h1 className="text-lg md:text-xl font-semibold">
+                            {activeTab === 'CLASSES' ? 'Kelas' :
+                             activeTab === 'USERS' ? 'Siswa' :
+                             activeTab === 'PACKS' ? 'Paket Ujian' :
+                             activeTab === 'QUESTIONS' ? 'Bank Soal' :
+                             activeTab === 'MONITORING' ? 'Monitoring' :
+                             activeTab === 'RESULTS' ? 'Hasil Ujian' :
+                             activeTab === 'ANALYSIS' ? 'Analisis' :
+                             activeTab === 'SLIDES' ? 'Login Slider' : activeTab}
+                        </h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={refreshActiveTab} disabled={isTabLoading(activeTab)}>
@@ -452,7 +461,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                             ) : (
                                 <RotateCcw className="w-4 h-4 mr-2" />
                             )}
-                            Refresh
+                            Segarkan Data
                         </Button>
                     </div>
                 </header>

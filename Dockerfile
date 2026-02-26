@@ -4,7 +4,7 @@ FROM node:20-slim AS deps
 WORKDIR /app
 
 # Install OpenSSL (required by Prisma)
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y openssl python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/

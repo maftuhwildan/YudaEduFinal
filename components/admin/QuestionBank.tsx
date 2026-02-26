@@ -53,10 +53,10 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                 <CardHeader>
                     <div className="flex flex-col md:flex-row gap-6 items-end">
                         <div className="flex-1 w-full space-y-2">
-                            <Label>Select Pack to Manage</Label>
+                            <Label>Pilih Paket Ujian</Label>
                             <div className="flex gap-2">
                                 <Select value={manualPackId} onValueChange={setManualPackId}>
-                                    <SelectTrigger><SelectValue placeholder="-- Select Exam Pack --" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder="-- Pilih Paket Ujian --" /></SelectTrigger>
                                     <SelectContent>
                                         {packs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                                     </SelectContent>
@@ -69,14 +69,14 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
 
                         <div className="flex-[2] w-full flex gap-4 items-end">
                             <div className="flex-1 space-y-2">
-                                <Label>AI Generator Topic</Label>
+                                <Label>Topik Generator AI</Label>
                                 <div className="relative">
                                     <Sparkles className="absolute left-3 top-3 w-5 h-5 text-primary animate-pulse" />
-                                    <Input value={genTopic} onChange={e => setGenTopic(e.target.value)} placeholder="e.g. 'Demand and Supply'" className="pl-10" />
+                                    <Input value={genTopic} onChange={e => setGenTopic(e.target.value)} placeholder="Cth. 'Hukum Permintaan dan Penawaran'" className="pl-10" />
                                 </div>
                             </div>
                             <div className="w-24 space-y-2">
-                                <Label>Variant</Label>
+                                <Label>Varian</Label>
                                 <Select value={genVariant} onValueChange={setGenVariant}>
                                     <SelectTrigger className="font-bold text-center">
                                         <SelectValue />
@@ -89,7 +89,7 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                                 </Select>
                             </div>
                             <Button onClick={handleGenerateAI} disabled={isGenerating || !genTopic}>
-                                {isGenerating ? 'Generating...' : 'Generate'}
+                                {isGenerating ? 'Membuat...' : 'Buat dengan AI'}
                             </Button>
                         </div>
                     </div>
@@ -100,40 +100,40 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Edit2 className="w-5 h-5 text-primary" />
-                        {editingId ? 'Edit Question' : 'Manual Input'}
+                        {editingId ? 'Edit Soal' : 'Input Manual'}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
                         <Label>Stimulus (Wacana/Case Study)</Label>
-                        <RichTextEditor value={manualQ.stimulus || ''} onChange={val => setManualQ({ ...manualQ, stimulus: val })} placeholder="Optional case study text or reading passage..." />
-                        <p className="text-[10px] text-muted-foreground">Leave empty if not part of a question group.</p>
+                        <RichTextEditor value={manualQ.stimulus || ''} onChange={val => setManualQ({ ...manualQ, stimulus: val })} placeholder="Teks studi kasus atau wacana (opsional)..." />
+                        <p className="text-[10px] text-muted-foreground">Biarkan kosong jika bukan bagian dari soal kelompok.</p>
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Question Stem</Label>
-                        <RichTextEditor value={manualQ.text || ''} onChange={val => setManualQ({ ...manualQ, text: val })} placeholder="Type the main question here..." />
+                        <Label>Pertanyaan Utama</Label>
+                        <RichTextEditor value={manualQ.text || ''} onChange={val => setManualQ({ ...manualQ, text: val })} placeholder="Ketik pertanyaan utama di sini..." />
                     </div>
 
 
                     <div className="flex gap-4">
                         <div className="flex-1 space-y-2">
-                            <Label>Pack</Label>
+                            <Label>Paket Ujian</Label>
                             <Select value={manualPackId} onValueChange={setManualPackId}>
-                                <SelectTrigger><SelectValue placeholder="-- Select --" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="-- Pilih --" /></SelectTrigger>
                                 <SelectContent>
                                     {packs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="w-32 space-y-2">
-                            <Label>Variant</Label>
+                            <Label>Varian</Label>
                             <Input value={manualQ.variant} onChange={e => setManualQ({ ...manualQ, variant: e.target.value.toUpperCase() })} maxLength={1} className="text-center font-bold" />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Answer Options</Label>
+                        <Label>Pilihan Jawaban</Label>
                         <div className="space-y-4">
                             {['A', 'B', 'C', 'D', 'E'].map((lbl, idx) => (
                                 <div key={idx} className="border rounded-lg p-3 bg-muted/30 relative">
@@ -142,7 +142,7 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                                         <Checkbox
                                             checked={manualQ.correctAnswer === (manualQ.options ? manualQ.options[idx] : '') && manualQ.options?.[idx] !== ''}
                                             onCheckedChange={() => setManualQ({ ...manualQ, correctAnswer: manualQ.options![idx] })}
-                                            title="Mark as Correct Answer"
+                                            title="Tandai sebagai Jawaban Benar"
                                         />
                                     </div>
                                     <RichTextEditor
@@ -159,7 +159,7 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                                             });
                                             setManualQ({ ...manualQ, options: newOpts });
                                         }}
-                                        placeholder={`Option ${lbl}...`}
+                                        placeholder={`Pilihan ${lbl}...`}
                                         minHeight="60px"
                                     />
                                 </div>
@@ -168,10 +168,10 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                     </div>
 
                     <Button onClick={handleSaveQuestion} className="w-full" size="lg">
-                        {editingId ? <><Save className="w-4 h-4 mr-2" /> Update Question</> : <><Plus className="w-4 h-4 mr-2" /> Add Question</>}
+                        {editingId ? <><Save className="w-4 h-4 mr-2" /> Perbarui Soal</> : <><Plus className="w-4 h-4 mr-2" /> Tambah Soal</>}
                     </Button>
                     {editingId && (
-                        <Button variant="ghost" onClick={resetManualForm} className="w-full">Cancel Edit</Button>
+                        <Button variant="ghost" onClick={resetManualForm} className="w-full">Batal Mengedit</Button>
                     )}
                 </CardContent>
             </Card>
@@ -208,7 +208,7 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                                                     onClick={() => setQuestionVariantFilter(v)}
                                                     className="h-8"
                                                 >
-                                                    Variant {v} ({count})
+                                                    Varian {v} ({count})
                                                 </Button>
                                             );
                                         })}
@@ -257,7 +257,7 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
                         {questions.filter(q => q.packId === manualPackId).length === 0 && (
                             <Card className="border-dashed">
                                 <CardContent className="text-center py-12 text-muted-foreground">
-                                    No questions in this pack yet. Add manually or use AI.
+                                    Belum ada soal pada ujian ini. Tambahkan manual atau gunakan AI.
                                 </CardContent>
                             </Card>
                         )}
@@ -269,12 +269,12 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
             <Dialog open={showQuickPackModal} onOpenChange={setShowQuickPackModal}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Create New Exam Pack</DialogTitle>
+                        <DialogTitle>Buat Paket Ujian Baru</DialogTitle>
                     </DialogHeader>
-                    <Input value={packForm.name} onChange={e => setPackForm({ ...packForm, name: e.target.value })} placeholder="Exam Name" />
+                    <Input value={packForm.name} onChange={e => setPackForm({ ...packForm, name: e.target.value })} placeholder="Nama Ujian" />
                     <DialogFooter>
-                        <Button variant="ghost" onClick={() => setShowQuickPackModal(false)}>Cancel</Button>
-                        <Button onClick={handleSavePack}>Create</Button>
+                        <Button variant="ghost" onClick={() => setShowQuickPackModal(false)}>Batal</Button>
+                        <Button onClick={handleSavePack}>Buat</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

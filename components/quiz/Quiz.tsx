@@ -141,11 +141,11 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                 <Card className="max-w-md w-full text-center border-destructive">
                     <CardHeader>
                         <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-                        <CardTitle>Access Denied</CardTitle>
+                        <CardTitle>Akses Ditolak</CardTitle>
                         <CardDescription>{errorMessage}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={logout} variant="outline">Logout</Button>
+                        <Button onClick={logout} variant="outline">Keluar</Button>
                     </CardContent>
                 </Card>
             </div>
@@ -157,8 +157,8 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
             <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 font-sans">
                 <div className="max-w-2xl w-full">
                     <div className="text-center mb-8">
-                        <h1 className="text-2xl font-bold">Available Exams</h1>
-                        <p className="text-muted-foreground">Hello, {user.fullName || user.username}. Please select an exam.</p>
+                        <h1 className="text-2xl font-bold">Daftar Ujian</h1>
+                        <p className="text-muted-foreground">Halo, {user.fullName || user.username}. Silakan pilih ujian.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -176,7 +176,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                                         <CardTitle className="text-lg group-hover:text-primary">{p.name}</CardTitle>
                                     </div>
                                     <CardDescription className="flex gap-4 mt-2">
-                                        <span>{p.timeLimit} Minutes</span>
+                                        <span>{p.timeLimit} Menit</span>
                                     </CardDescription>
                                 </CardHeader>
                             </Card>
@@ -185,7 +185,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
 
                     <div className="mt-8 text-center">
                         <Button variant="ghost" onClick={logout} className="text-muted-foreground hover:text-destructive">
-                            <LogOut className="w-4 h-4 mr-2" /> Logout
+                            <LogOut className="w-4 h-4 mr-2" /> Keluar
                         </Button>
                     </div>
                 </div>
@@ -212,15 +212,15 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
                             <Key className="w-6 h-6 text-primary" />
                         </div>
-                        <CardTitle>{existingSession ? 'Resume Exam' : 'Enter Exam Token'}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-2">Enter the exam token to {existingSession ? 'resume' : 'start'}.</p>
+                        <CardTitle>{existingSession ? 'Lanjutkan Ujian' : 'Masukkan Token Ujian'}</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-2">Masukkan token untuk {existingSession ? 'melanjutkan' : 'memulai'}.</p>
                         <CardDescription className="font-medium text-primary">{selectedPackName}</CardDescription>
 
                         {existingSession && (
                             <Alert className="mt-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                                 <RotateCcw className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                 <AlertDescription className="text-blue-700 dark:text-blue-400 font-bold text-xs">
-                                    You have an active session. Enter token to resume.
+                                    Akses ujian sebelumnya terdeteksi. Silakan masukkan token untuk melanjutkan.
                                 </AlertDescription>
                             </Alert>
                         )}
@@ -240,7 +240,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                         />
 
                         <Button onClick={startQuiz} className="w-full" size="lg">
-                            {existingSession ? 'RESUME EXAM' : 'START EXAM'}
+                            {existingSession ? 'LANJUTKAN UJIAN' : 'MULAI UJIAN'}
                         </Button>
                     </CardContent>
                 </Card>
@@ -250,7 +250,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
 
     // --- QUIZ stage ---
     const currentQ = questions[currentIndex];
-    if (!currentQ) return <div className="flex items-center justify-center min-h-screen">Loading exam...</div>;
+    if (!currentQ) return <div className="flex items-center justify-center min-h-screen">Memuat ujian...</div>;
 
     const hasStimulus = !!currentQ.stimulus;
 
@@ -264,13 +264,13 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                         <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
                             <Lock className="w-10 h-10 text-destructive" />
                         </div>
-                        <DialogTitle className="text-2xl mb-2">Exam Locked</DialogTitle>
+                        <DialogTitle className="text-2xl mb-2">Ujian Terkunci</DialogTitle>
                         <DialogDescription className="mb-6">
-                            You have exited fullscreen mode. To prevent cheating, the exam is hidden.
-                            <span className="text-xs font-bold text-destructive mt-2 block">This action has been flagged.</span>
+                            Anda telah keluar dari mode layar penuh. Untuk mencegah kecurangan, ujian disembunyikan.
+                            <span className="text-xs font-bold text-destructive mt-2 block">Tindakan ini direkam oleh sistem.</span>
                         </DialogDescription>
                         <Button onClick={enterFullscreen} className="w-full" size="lg">
-                            Return to Fullscreen
+                            Kembali ke Layar Penuh
                         </Button>
                     </div>
                 </DialogContent>
@@ -283,13 +283,13 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                         <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                             <AlertTriangle className="w-8 h-8 text-destructive" />
                         </div>
-                        <DialogTitle className="text-destructive mb-2">Security Warning!</DialogTitle>
+                        <DialogTitle className="text-destructive mb-2">Peringatan Keamanan!</DialogTitle>
                         <DialogDescription className="font-medium mb-4">{cheatWarningMsg}</DialogDescription>
                         <p className="text-xs text-muted-foreground mb-6">
-                            Your actions are being monitored and recorded. Continued violations may result in exam termination.
+                            Tindakan Anda direkam dan diawasi. Pelanggaran berulang dapat mengakibatkan ujian dihentikan paksa.
                         </p>
                         <Button variant="destructive" onClick={() => setShowCheatWarning(false)} className="w-full">
-                            I Understand
+                            Saya Mengerti
                         </Button>
                     </div>
                 </DialogContent>
@@ -299,14 +299,14 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
             <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
                 <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Submit Exam?</DialogTitle>
+                        <DialogTitle>Kumpulkan Ujian?</DialogTitle>
                         <DialogDescription>
-                            {unansweredCount > 0 ? `You have ${unansweredCount} unanswered questions.` : 'You are about to finish the exam.'}
+                            {unansweredCount > 0 ? `Anda memiliki ${unansweredCount} pertanyaan yang belum dijawab.` : 'Anda akan menyelesaikan ujian ini.'}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="flex gap-3 sm:gap-0">
-                        <Button variant="outline" onClick={() => setShowSubmitConfirm(false)}>Back</Button>
-                        <Button onClick={session.executeSubmission}>Submit</Button>
+                        <Button variant="outline" onClick={() => setShowSubmitConfirm(false)}>Kembali</Button>
+                        <Button onClick={() => { setShowSubmitConfirm(false); session.executeSubmission(); }}>Kumpulkan</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -315,14 +315,14 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
             <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
                 <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Logout?</DialogTitle>
+                        <DialogTitle>Keluar Ujian?</DialogTitle>
                         <DialogDescription>
-                            You are exiting without submitting. Progress may be lost.
+                            Anda akan keluar dari aplikasi. Progres jawaban seharusnya tersimpan, tetapi resiko ditanggung sendiri.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="flex gap-3 sm:gap-0">
-                        <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={logout}>Logout</Button>
+                        <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>Batal</Button>
+                        <Button variant="destructive" onClick={logout}>Keluar</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -346,7 +346,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                         <SlidingNumber value={Math.floor(timeLeft / 60)} padStart />:<SlidingNumber value={timeLeft % 60} padStart />
                     </Badge>
 
-                    <Button variant="ghost" size="icon" onClick={enterFullscreen} title="Enter Fullscreen">
+                    <Button variant="ghost" size="icon" onClick={enterFullscreen} title="Mode Layar Penuh">
                         <Maximize className="w-5 h-5" />
                     </Button>
 
@@ -355,7 +355,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                         size="icon"
                         onClick={() => setShowLogoutConfirm(true)}
                         className="hover:text-destructive hover:bg-destructive/10"
-                        title="Save & Logout"
+                        title="Simpan & Keluar"
                     >
                         <LogOut className="w-5 h-5" />
                     </Button>
@@ -394,7 +394,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                     <div className="hidden lg:block w-1/2 p-8 overflow-y-auto bg-muted/30 border-r">
                         <Card className="min-h-full">
                             <CardHeader>
-                                <CardDescription className="uppercase tracking-widest text-xs font-bold">Stimulus Material</CardDescription>
+                                <CardDescription className="uppercase tracking-widest text-xs font-bold">Materi Bacaan</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="quiz-scale-area overflow-hidden">
@@ -421,7 +421,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
 
                         <Card className="overflow-hidden">
                             <CardHeader>
-                                <Badge variant="secondary" className="w-fit mb-2">Question {currentIndex + 1}</Badge>
+                                <Badge variant="secondary" className="w-fit mb-2">Soal {currentIndex + 1}</Badge>
                                 {/* quiz-scale-area: overflow:hidden gives JS the true available width
                                     and clips any overflow after the scale transform */}
                                 <div className="quiz-scale-area overflow-hidden">
@@ -477,7 +477,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                                     Gagal mengirim jawaban. Jawaban tersimpan di perangkat.
                                 </AlertDescription>
                                 <Button variant="destructive" size="sm" onClick={session.executeSubmission}>
-                                    <RotateCcw className="w-4 h-4 mr-1" /> Retry Submit
+                                    <RotateCcw className="w-4 h-4 mr-1" /> Coba Kirim Ulang
                                 </Button>
                             </Alert>
                         )}
@@ -487,16 +487,16 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                                 onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                                 disabled={currentIndex === 0}
                             >
-                                <ArrowLeft className="w-4 h-4 mr-2" /> Previous
+                                <ArrowLeft className="w-4 h-4 mr-2" /> Sebelumnya
                             </Button>
 
                             {currentIndex === questions.length - 1 ? (
                                 <Button onClick={() => setShowSubmitConfirm(true)}>
-                                    Finish Exam <Flag className="w-4 h-4 ml-2" />
+                                    Selesai Ujian <Flag className="w-4 h-4 ml-2" />
                                 </Button>
                             ) : (
                                 <Button onClick={() => setCurrentIndex(prev => prev + 1)}>
-                                    Next <ArrowRight className="w-4 h-4 ml-2" />
+                                    Selanjutnya <ArrowRight className="w-4 h-4 ml-2" />
                                 </Button>
                             )}
                         </div>

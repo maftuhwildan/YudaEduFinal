@@ -24,18 +24,18 @@ export const ResultView: React.FC<ResultViewProps> = ({ reason = 'submitted', on
                         }
                     </div>
                     <CardTitle className="text-2xl">
-                        {isExpired ? 'Waktu Ujian Telah Habis' : 'Exam Submitted'}
+                        {isExpired ? 'Waktu Ujian Telah Habis' : 'Ujian Selesai'}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-muted-foreground">
                         {isExpired
                             ? 'Waktu ujian Anda telah berakhir saat offline. Jawaban Anda telah otomatis tersimpan dan dikumpulkan.'
-                            : 'Your result has been saved successfully.'
+                            : 'Jawaban Anda telah berhasil disimpan.'
                         }
                     </p>
                     <Button onClick={onLogout} variant="outline" className="w-full">
-                        <LogOut className="w-4 h-4 mr-2" /> Logout
+                        <LogOut className="w-4 h-4 mr-2" /> Keluar
                     </Button>
                 </CardContent>
             </Card>

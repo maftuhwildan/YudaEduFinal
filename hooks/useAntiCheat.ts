@@ -29,23 +29,23 @@ export function useAntiCheat({
 
         const handleVisibilityChange = () => {
             if (document.hidden) {
-                triggerWarning('Tab switching detected! System has recorded this action.', true);
+                triggerWarning('Terdeteksi berpindah tab! Sistem telah mencatat tindakan ini.', true);
             }
         };
 
         const handleContextMenu = (e: MouseEvent) => {
             e.preventDefault();
-            triggerWarning('Right-click is disabled.', false);
+            triggerWarning('Klik kanan dinonaktifkan.', false);
         };
 
         const handleCopyPaste = (e: ClipboardEvent) => {
             e.preventDefault();
-            triggerWarning('Copy/Paste is disabled.', false);
+            triggerWarning('Salin/Tempel dinonaktifkan.', false);
         };
 
         const handleBlur = () => {
             if (!showCheatWarning && isFullscreen) {
-                triggerWarning('Focus lost! Please stay on the exam screen.', true);
+                triggerWarning('Fokus hilang! Harap tetap di layar ujian.', true);
             }
         };
 

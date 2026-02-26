@@ -16,10 +16,13 @@ export async function getExamSessions(packId: string) {
         orderBy: { lastUpdate: 'desc' }
     });
 
+    const serverTime = Date.now();
+
     return sessions.map((s: any) => ({
         ...s,
         startTime: s.startTime.toString(),
-        lastUpdate: s.lastUpdate.toString()
+        lastUpdate: s.lastUpdate.toString(),
+        serverTime
     }));
 }
 
@@ -120,7 +123,8 @@ export async function expireSessionIfOverdue(session: any): Promise<boolean> {
 
     // Phase 2: Time exceeded — now load questions for scoring
     const questions = await prisma.question.findMany({
-        where: { packId: packMeta.id }
+        where: { packId: packMeta.id },
+        select: { id: true, correctAnswer: true }
     });
 
     const savedAnswers = typeof session.answers === 'string'

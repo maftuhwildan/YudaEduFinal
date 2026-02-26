@@ -8,11 +8,11 @@ import { SessionUser, Role } from '@/types';
 
 // WARN-8: Lazy-load heavy components — students don't download admin bundle, vice versa
 const AdminDashboard = dynamic(() => import('@/components/AdminDashboard').then(m => ({ default: m.AdminDashboard })), {
-    loading: () => <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>,
+    loading: () => <div className="min-h-screen flex items-center justify-center">Memuat Dashboard...</div>,
     ssr: false,
 });
 const Quiz = dynamic(() => import('@/components/quiz/Quiz').then(m => ({ default: m.Quiz })), {
-    loading: () => <div className="min-h-screen flex items-center justify-center">Loading Exam...</div>,
+    loading: () => <div className="min-h-screen flex items-center justify-center">Memuat Ujian...</div>,
     ssr: false,
 });
 const ResultView = dynamic(() => import('@/components/quiz/ResultView').then(m => ({ default: m.ResultView })), {
@@ -75,7 +75,7 @@ export default function Home() {
         setView('RESULT');
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
     if (view === 'LOGIN') {
         return <Login onLogin={handleLogin} />;

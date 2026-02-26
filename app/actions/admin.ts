@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '../lib/prisma';
-import { hash } from 'bcryptjs';
+import { hash } from 'bcrypt';
 import { requireAdmin } from '@/lib/auth-guard';
 import { randomInt, randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';

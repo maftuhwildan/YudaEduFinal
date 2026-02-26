@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '../lib/prisma';
-import { compare, hash } from 'bcryptjs';
+import { compare, hash } from 'bcrypt';
 import { cookies, headers } from 'next/headers';
 import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';
@@ -62,7 +62,7 @@ export async function login(formData: FormData) {
             || headersList.get('x-real-ip')
             || 'unknown';
 
-        const user = await prisma.user.findFirst({
+        const user = await prisma.user.findUnique({
             where: { username },
             include: { class: true }
         });

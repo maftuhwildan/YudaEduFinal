@@ -149,17 +149,17 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                 <CardTitle className="flex items-center gap-2">
-                                    Student Management
+                                    Manajemen Siswa
                                     <Badge variant="secondary" className="text-xs font-normal">
-                                        {studentUsers.length} students
+                                        {studentUsers.length} siswa
                                     </Badge>
                                 </CardTitle>
-                                <CardDescription>Import student lists via Excel or add manually.</CardDescription>
+                                <CardDescription>Impor daftar siswa via Excel atau tambah manual.</CardDescription>
                             </div>
                             <div className="flex gap-2 flex-wrap">
                                 <input type="file" accept=".xlsx,.xls" ref={fileInputRef} onChange={handleImportStudents} className="hidden" />
                                 <Button variant="outline" onClick={handleDownloadTemplate} disabled={isImporting}>
-                                    <Download className="w-4 h-4 mr-2" /> Download Template
+                                    <Download className="w-4 h-4 mr-2" /> Unduh Templat
                                 </Button>
                                 <Button
                                     variant={isImporting ? "default" : "outline"}
@@ -175,10 +175,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                                     ) : (
                                         <Upload className="w-4 h-4 mr-2" />
                                     )}
-                                    {isImporting ? 'Importing...' : 'Import Excel'}
+                                    {isImporting ? 'Mengimpor...' : 'Impor Excel'}
                                 </Button>
                                 <Button onClick={() => setShowUserModal(true)} disabled={isImporting}>
-                                    <UserPlus className="w-4 h-4 mr-2" /> Add Student
+                                    <UserPlus className="w-4 h-4 mr-2" /> Tambah Siswa
                                 </Button>
                             </div>
                         </div>
@@ -311,16 +311,16 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                                             <Checkbox
                                                 checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
                                                 onCheckedChange={toggleSelectAll}
-                                                aria-label="Select all"
+                                                aria-label="Pilih semua"
                                             />
                                         </TableHead>
                                         <TableHead className="w-12 text-center">No</TableHead>
                                         <TableHead className="w-20">No Absen</TableHead>
-                                        <TableHead>Full Name</TableHead>
+                                        <TableHead>Nama Lengkap</TableHead>
                                         <TableHead>Username</TableHead>
-                                        {selectedClassId === 'ALL' && <TableHead>Class</TableHead>}
-                                        <TableHead>Password</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        {selectedClassId === 'ALL' && <TableHead>Kelas</TableHead>}
+                                        <TableHead>Kata Sandi</TableHead>
+                                        <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -390,7 +390,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                                 </span>
                                 {searchQuery && (
                                     <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setSearchQuery('')}>
-                                        Clear search
+                                        Hapus pencarian
                                     </Button>
                                 )}
                             </div>
@@ -450,19 +450,19 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Add New Student</DialogTitle>
-                        <DialogDescription>Enter student details below.</DialogDescription>
+                        <DialogTitle>Tambah Siswa Baru</DialogTitle>
+                        <DialogDescription>Masukkan detail siswa di bawah ini.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label>Full Name</Label>
+                            <Label>Nama Lengkap</Label>
                             <Input value={userForm.fullName} onChange={e => setUserForm({ ...userForm, fullName: e.target.value })} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Class</Label>
+                                <Label>Kelas</Label>
                                 <Select value={userForm.classId} onValueChange={v => setUserForm({ ...userForm, classId: v })}>
-                                    <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
                                     <SelectContent>
                                         {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
@@ -474,18 +474,18 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                             </div>
                         </div>
                         <Separator />
-                        <p className="text-xs text-primary font-bold">Login Credentials</p>
+                        <p className="text-xs text-primary font-bold">Kredensial Akses</p>
                         <div className="space-y-2">
                             <Label>Username / NIS</Label>
                             <Input value={userForm.username} onChange={e => setUserForm({ ...userForm, username: e.target.value })} className="font-mono" />
                         </div>
                         <div className="space-y-2">
-                            <Label>Password</Label>
+                            <Label>Kata Sandi</Label>
                             <Input value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} className="font-mono" />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={handleSaveManualUser} className="w-full">Save Student</Button>
+                        <Button onClick={handleSaveManualUser} className="w-full">Simpan Siswa</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

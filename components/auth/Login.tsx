@@ -41,7 +41,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError(result?.error || 'Login gagal. Coba lagi nanti.');
       }
     } catch (err: any) {
-      setError(err?.message || 'An unexpected error occurred');
+      setError(err?.message || 'Terjadi kesalahan tidak terduga');
     } finally {
       setLoading(false);
       submittingRef.current = false;
@@ -72,9 +72,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   </div>
                   <span className="font-bold text-base tracking-tight">YudaEdu</span>
                 </a>
-                <h1 className="text-2xl font-bold">Sign In</h1>
+                <h1 className="text-2xl font-bold">Masuk</h1>
                 <p className="text-balance text-sm text-muted-foreground">
-                  Your Ultimate Digital Assessment
+                  Portal Ujian Digital Sekolah
                 </p>
               </div>
 
@@ -96,13 +96,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="pl-10"
-                      placeholder="Enter Student ID"
+                      placeholder="Masukkan ID / No. Absen"
                       required
                     />
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">Kata Sandi</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -125,7 +125,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   </div>
                 </div>
                 <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? 'Verifying...' : 'Sign In'}
+                  {loading ? 'Memverifikasi...' : 'Masuk'}
                 </Button>
               </div>
             </form>

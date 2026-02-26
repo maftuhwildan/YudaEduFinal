@@ -29,14 +29,14 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <BarChart3 className="w-5 h-5 text-primary" />
-                        Exam Analysis
+                        Analisis Ujian
                     </CardTitle>
-                    <CardDescription>View detailed statistics and performance metrics for each exam.</CardDescription>
+                    <CardDescription>Lihat statistik mendetail dan metrik performa untuk setiap ujian.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Select value={analysisPackId} onValueChange={setAnalysisPackId}>
                         <SelectTrigger className="max-w-xs">
-                            <SelectValue placeholder="Select Exam Pack" />
+                            <SelectValue placeholder="Pilih Paket Ujian" />
                         </SelectTrigger>
                         <SelectContent>
                             {packs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -75,7 +75,7 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
                                 <CardContent className="pt-6">
                                     <div className="flex items-center gap-2 mb-1">
                                         <TrendingUp className="w-4 h-4 text-green-500" />
-                                        <span className="text-xs text-muted-foreground">Pass Rate (≥75)</span>
+                                        <span className="text-xs text-muted-foreground">Tingkat Kelulusan (≥75)</span>
                                     </div>
                                     <div className="text-2xl font-bold text-green-600">{s.passRate}%</div>
                                 </CardContent>
@@ -113,20 +113,20 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base">Score Range</CardTitle>
+                                    <CardTitle className="text-base">Rentang Nilai</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-muted-foreground">Highest Score</span>
+                                        <span className="text-sm text-muted-foreground">Nilai Tertinggi</span>
                                         <Badge variant="default" className="text-lg px-3">{s.highestScore}%</Badge>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-muted-foreground">Lowest Score</span>
+                                        <span className="text-sm text-muted-foreground">Nilai Terendah</span>
                                         <Badge variant="secondary" className="text-lg px-3">{s.lowestScore}%</Badge>
                                     </div>
                                     <Separator />
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-muted-foreground">Avg Cheat Flags</span>
+                                        <span className="text-sm text-muted-foreground">Rata-rata Peringatan Curang</span>
                                         <Badge variant={s.avgCheatCount > 1 ? "destructive" : "secondary"}>
                                             {s.avgCheatCount}
                                         </Badge>
@@ -136,14 +136,14 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base">Score Distribution</CardTitle>
+                                    <CardTitle className="text-base">Distribusi Nilai</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     {[
-                                        { label: 'Excellent (≥90)', count: s.distribution.excellent, color: 'text-green-600', bg: 'bg-green-500' },
-                                        { label: 'Good (75-89)', count: s.distribution.good, color: 'text-blue-600', bg: 'bg-blue-500' },
-                                        { label: 'Average (60-74)', count: s.distribution.average, color: 'text-yellow-600', bg: 'bg-yellow-500' },
-                                        { label: 'Poor (<60)', count: s.distribution.poor, color: 'text-red-600', bg: 'bg-red-500' },
+                                        { label: 'Sangat Baik (≥90)', count: s.distribution.excellent, color: 'text-green-600', bg: 'bg-green-500' },
+                                        { label: 'Baik (75-89)', count: s.distribution.good, color: 'text-blue-600', bg: 'bg-blue-500' },
+                                        { label: 'Cukup (60-74)', count: s.distribution.average, color: 'text-yellow-600', bg: 'bg-yellow-500' },
+                                        { label: 'Kurang (<60)', count: s.distribution.poor, color: 'text-red-600', bg: 'bg-red-500' },
                                     ].map(d => (
                                         <div key={d.label} className="space-y-1">
                                             <div className="flex justify-between text-sm">
@@ -343,7 +343,7 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
             {(!analysisData || !(analysisData as any).summary) && analysisPackId && (
                 <Card className="border-dashed">
                     <CardContent className="text-center py-12 text-muted-foreground">
-                        No analysis data available. Students need to complete the exam first.
+                        Tidak ada data analisis. Siswa harus menyelesaikan ujian terlebih dahulu.
                     </CardContent>
                 </Card>
             )}
@@ -352,7 +352,7 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
                 <Card className="border-dashed">
                     <CardContent className="text-center py-12 text-muted-foreground">
                         <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        Select an exam pack above to view analysis.
+                        Pilih paket ujian di atas untuk melihat analisis.
                     </CardContent>
                 </Card>
             )}

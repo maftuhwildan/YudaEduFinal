@@ -147,21 +147,21 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                 'Full Name': student?.fullName || r.username,
                 'Class': className,
                 'Username': r.username,
-                'Attempt': attempt > 1 ? `Retake #${attempt - 1}` : 'Original',
-                'Score': Math.round((Number(r.score) + Number.EPSILON) * 100) / 100,
-                'Correct': Number(r.correctCount) || 0,
-                'Total Questions': Number(r.totalQuestions) || 0,
-                'Answered': (() => {
+                'Sesi': attempt > 1 ? `Ulang #${attempt - 1}` : 'Asli',
+                'Nilai': Math.round((Number(r.score) + Number.EPSILON) * 100) / 100,
+                'Benar': Number(r.correctCount) || 0,
+                'Total Soal': Number(r.totalQuestions) || 0,
+                'Terjawab': (() => {
                     const ans = r.answers;
                     if (ans && typeof ans === 'object' && !Array.isArray(ans)) {
                         return Object.keys(ans).filter(k => !k.startsWith('_')).length;
                     }
                     return 0;
                 })(),
-                'Pack Name': r.packName,
-                'Variant': r.variant || 'A',
-                'Timestamp': safariSafeDate(r.timestamp).toLocaleString(),
-                'Cheat Count': Number(r.cheatCount) || 0,
+                'Nama Paket': r.packName,
+                'Varian': r.variant || 'A',
+                'Waktu': safariSafeDate(r.timestamp).toLocaleString(),
+                'Peringatan Curang': Number(r.cheatCount) || 0,
             };
         }).sort((a, b) => {
             const classCompare = a['Class'].localeCompare(b['Class']);
@@ -260,15 +260,15 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Exam Results</CardTitle>
-                    <CardDescription>View and export student performance.</CardDescription>
+                    <CardTitle>Hasil Ujian</CardTitle>
+                    <CardDescription>Lihat dan ekspor nilai siswa.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                         <div className="flex-1 w-full md:max-w-xs space-y-2">
-                            <Label>Select Exam to View Results</Label>
+                            <Label>Pilih Ujian untuk Melihat Hasil</Label>
                             <Select value={selectedResultPackId} onValueChange={(v) => { setSelectedResultPackId(v); setResultClassFilter('ALL'); clearSelection(); }}>
-                                <SelectTrigger><SelectValue placeholder="-- Select Exam Pack --" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="-- Pilih Paket Ujian --" /></SelectTrigger>
                                 <SelectContent>
                                     {packOptions.existing.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                                     {packOptions.orphaned.length > 0 && (
@@ -322,7 +322,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                     {resultSortDir === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                 </Button>
                                 <Button onClick={handleExport}>
-                                    <Download className="w-4 h-4 mr-2" /> Export {resultClassFilter !== 'ALL' ? `(${filteredResults.length})` : ''}
+                                    <Download className="w-4 h-4 mr-2" /> Ekspor {resultClassFilter !== 'ALL' ? `(${filteredResults.length})` : ''}
                                 </Button>
                             </div>
                         )}
@@ -397,16 +397,16 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                         />
                                     </TableHead>
                                     <TableHead>No</TableHead>
-                                    <TableHead>Student</TableHead>
-                                    <TableHead>Full Name</TableHead>
+                                    <TableHead>Pengguna</TableHead>
+                                    <TableHead>Nama Lengkap</TableHead>
                                     <TableHead>No Absen</TableHead>
-                                    <TableHead>Class</TableHead>
+                                    <TableHead>Kelas</TableHead>
                                     <TableHead>Var</TableHead>
-                                    <TableHead>Score</TableHead>
+                                    <TableHead>Nilai</TableHead>
                                     <TableHead>Dijawab</TableHead>
-                                    <TableHead>Flags</TableHead>
-                                    <TableHead className="text-right">Date</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    <TableHead>Peringatan</TableHead>
+                                    <TableHead className="text-right">Tanggal</TableHead>
+                                    <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -463,7 +463,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                                     <span className="font-bold">{r.username}</span>
                                                     {attemptNum > 1 && (
                                                         <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 text-amber-600 border-amber-300 bg-amber-50">
-                                                            Retake #{attemptNum - 1}
+                                                            Ulang #{attemptNum - 1}
                                                         </Badge>
                                                     )}
                                                 </TableCell>
@@ -491,7 +491,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                                         );
                                                     })()}
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground">{r.cheatCount > 0 ? `${r.cheatCount} Flags` : '-'}</TableCell>
+                                                <TableCell className="text-muted-foreground">{r.cheatCount > 0 ? `${r.cheatCount} Kali` : '-'}</TableCell>
                                                 <TableCell className="text-right text-xs text-muted-foreground">
                                                     {safariSafeDate(r.timestamp).toLocaleString()}
                                                 </TableCell>
@@ -557,7 +557,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                 {filteredResults.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={12} className="text-center py-12 text-muted-foreground italic">
-                                            {packResults.length === 0 ? 'No results found for this exam pack.' : 'Tidak ada hasil untuk kelas ini.'}
+                                            {packResults.length === 0 ? 'Tidak ada hasil untuk paket ujian ini.' : 'Tidak ada hasil untuk kelas ini.'}
                                         </TableCell>
                                     </TableRow>
                                 )}

@@ -23,23 +23,23 @@ export const ClassManagement: React.FC<ClassManagementProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Create Class</CardTitle>
+                    <CardTitle>Buat Kelas</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="flex gap-2">
                         <Input
                             value={newClassName}
                             onChange={(e) => setNewClassName(e.target.value)}
-                            placeholder="e.g. 12 IPA 2"
+                            placeholder="Cth. 12 IPA 2"
                         />
-                        <Button onClick={handleCreateClass}>Add</Button>
+                        <Button onClick={handleCreateClass}>Tambah</Button>
                     </div>
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Existing Classes</CardTitle>
+                    <CardTitle>Daftar Kelas</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-wrap gap-2">

@@ -163,7 +163,10 @@ export async function submitQuizResult(resultData: any) {
         if (!user) throw new Error("User not found");
 
         // HIGH-1: Server-side scoring — never trust client score
-        const packQuestions = await prisma.question.findMany({ where: { packId } });
+        const packQuestions = await prisma.question.findMany({
+            where: { packId },
+            select: { id: true, correctAnswer: true }
+        });
         const totalQuestions = packQuestions.length;
         let correctCount = 0;
         for (const q of packQuestions) {
@@ -192,9 +195,22 @@ export async function submitQuizResult(resultData: any) {
                 // Already completed — fetch to confirm (could be expired by lazy expiry)
                 const existing = await tx.examSession.findUnique({
                     where: { userId_packId: { userId, packId } },
-                    select: { status: true },
+                    select: { status: true, score: true },
                 });
-                if (existing?.status === 'COMPLETED') return; // Idempotent — already done
+                if (existing?.status === 'COMPLETED') {
+                    // Fetch the saved result so we can return real score data
+                    const savedResult = await tx.result.findFirst({
+                        where: { userId },
+                        orderBy: { timestamp: 'desc' },
+                        select: { score: true, correctCount: true, totalQuestions: true },
+                    });
+                    throw {
+                        __alreadyCompleted: true,
+                        score: savedResult?.score ?? existing.score ?? 0,
+                        correctCount: savedResult?.correctCount ?? 0,
+                        totalQuestions: savedResult?.totalQuestions ?? 0,
+                    };
+                }
                 throw new Error("Active exam session not found.");
             }
 
@@ -230,6 +246,9 @@ export async function submitQuizResult(resultData: any) {
 
         return { success: true, score, correctCount, totalQuestions };
     } catch (error: any) {
+        if (error?.__alreadyCompleted) {
+            return { success: true, score: error.score, correctCount: error.correctCount, totalQuestions: error.totalQuestions };
+        }
         logger.error("Submit Error:", error);
         return { success: false, error: error.message };
     }

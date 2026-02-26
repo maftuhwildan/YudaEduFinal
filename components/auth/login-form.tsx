@@ -11,9 +11,9 @@ export function LoginForm({
   return (
     <form className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">Sign In</h1>
+        <h1 className="text-2xl font-bold">Masuk</h1>
         <p className="text-balance text-sm text-muted-foreground">
-          Your Ultimate Digital Assessment
+          Portal Ujian Digital Sekolah
         </p>
       </div>
       <div className="grid gap-6">
@@ -25,14 +25,14 @@ export function LoginForm({
               id="username"
               name="username"
               type="text"
-              placeholder="Enter Student ID"
+              placeholder="Masukkan ID / No. Absen"
               className="pl-10"
               required
             />
           </div>
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">Kata Sandi</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
             <Input
@@ -46,7 +46,7 @@ export function LoginForm({
           </div>
         </div>
         <Button type="submit" className="w-full">
-          Sign In
+          Masuk
         </Button>
       </div>
 

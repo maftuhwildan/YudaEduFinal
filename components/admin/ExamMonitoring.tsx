@@ -32,9 +32,9 @@ export const ExamMonitoring: React.FC<ExamMonitoringProps> = ({
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-primary" /> Live Exam Monitoring
+                        <Activity className="w-5 h-5 text-primary" /> Pantauan Ujian Langsung
                     </CardTitle>
-                    <CardDescription>Real-time progress of students currently taking exams.</CardDescription>
+                    <CardDescription>Pantau proses siswa yang sedang mengerjakan secara real-time.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Active students overview */}
@@ -76,17 +76,18 @@ export const ExamMonitoring: React.FC<ExamMonitoringProps> = ({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Student Name</TableHead>
-                                    <TableHead>Class</TableHead>
-                                    <TableHead className="w-1/3">Progress</TableHead>
-                                    <TableHead>Cheat Flags</TableHead>
-                                    <TableHead className="text-right">Last Active</TableHead>
+                                    <TableHead>Nama Siswa</TableHead>
+                                    <TableHead>Kelas</TableHead>
+                                    <TableHead className="w-1/3">Progres</TableHead>
+                                    <TableHead>Peringatan Curang</TableHead>
+                                    <TableHead className="text-right">Aktivitas Terakhir</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {liveSessions.map(s => {
                                     const progress = Math.round((s.answeredCount / s.totalQuestions) * 100) || 0;
-                                    const isOnline = (Date.now() - Number(s.lastUpdate)) < 20000;
+                                    const referenceTime = (s as any).serverTime || Date.now();
+                                    const isOnline = (referenceTime - Number(s.lastUpdate)) < 20000;
                                     const userClass = classes.find(c => c.id === s.classId)?.name || 'Unknown Class';
 
                                     return (
@@ -111,10 +112,10 @@ export const ExamMonitoring: React.FC<ExamMonitoringProps> = ({
                                             <TableCell>
                                                 {s.cheatCount > 0 ? (
                                                     <Badge variant="destructive">
-                                                        <ShieldAlert className="w-3 h-3 mr-1" /> {s.cheatCount} Flags
+                                                        <ShieldAlert className="w-3 h-3 mr-1" /> {s.cheatCount} Kali
                                                     </Badge>
                                                 ) : (
-                                                    <span className="text-muted-foreground text-xs">None</span>
+                                                    <span className="text-muted-foreground text-xs">Bersih</span>
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right font-mono text-xs text-muted-foreground">
@@ -126,7 +127,7 @@ export const ExamMonitoring: React.FC<ExamMonitoringProps> = ({
                                 {liveSessions.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">
-                                            No active students monitored in this session.
+                                            Tidak ada siswa yang aktif di sesi ini.
                                         </TableCell>
                                     </TableRow>
                                 )}
