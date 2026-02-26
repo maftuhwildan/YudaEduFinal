@@ -34,6 +34,7 @@ import {
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 interface AdminDashboardProps {
     user: SessionUser;
@@ -80,6 +81,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     // UI State
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    
+    // Global Confirmation Dialog State
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void | Promise<void>;
+        isLoading?: boolean;
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+    const requireConfirm = useCallback((title: string, message: string, onConfirm: () => void | Promise<void>) => {
+        setConfirmState({ isOpen: true, title, message, onConfirm, isLoading: false });
+    }, []);
+
+    const executeConfirm = async () => {
+        setConfirmState(prev => ({ ...prev, isLoading: true }));
+        try {
+            await confirmState.onConfirm();
+        } finally {
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+        }
+    };
 
     // ==========================================================================
     // LAZY FETCH HELPERS
@@ -101,6 +124,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     // ==========================================================================
     // EXTRACTED HANDLERS HOOK (SUG-4)
     // ==========================================================================
+    // ==========================================================================
+    // EXTRACTED HANDLERS HOOK (SUG-4)
+    // ==========================================================================
     const handlers = useAdminHandlers({
         classes, packs, questions,
         fetchClasses: async (force = false) => { await fetchClasses(force); },
@@ -108,6 +134,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
         fetchPacks: async (force = false) => { await fetchPacks(force); },
         fetchQuestions: async (force = false) => { await fetchQuestions(force); },
         setTabLoadingFor,
+        requireConfirm,
     });
 
     // Core data: Classes + Packs (fetched on mount — lightweight)
@@ -629,6 +656,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
                 user={user}
                 onProfileUpdated={(updated) => onProfileUpdate?.(updated)}
             />
+
+            {/* Global Confirmation Dialog */}
+            <Dialog open={confirmState.isOpen} onOpenChange={(isOpen) => !confirmState.isLoading && setConfirmState(prev => ({ ...prev, isOpen }))}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{confirmState.title}</DialogTitle>
+                        <DialogDescription>{confirmState.message}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} disabled={confirmState.isLoading}>Batal</Button>
+                        <Button variant="default" onClick={executeConfirm} disabled={confirmState.isLoading}>
+                            {confirmState.isLoading ? 'Memproses...' : 'Ya, Lanjutkan'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
     getLoginSlides,
     createLoginSlide,
@@ -35,6 +36,28 @@ export function LoginSlidesManagement() {
     const [showForm, setShowForm] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
+
+    // Global Confirmation Dialog State
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void | Promise<void>;
+        isLoading?: boolean;
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+    const requireConfirm = (title: string, message: string, onConfirm: () => void | Promise<void>) => {
+        setConfirmState({ isOpen: true, title, message, onConfirm, isLoading: false });
+    };
+
+    const executeConfirm = async () => {
+        setConfirmState(prev => ({ ...prev, isLoading: true }));
+        try {
+            await confirmState.onConfirm();
+        } finally {
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+        }
+    };
 
     const fetchSlides = async () => {
         setLoading(true);
@@ -95,10 +118,15 @@ export function LoginSlidesManagement() {
         setShowForm(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Hapus slide ini?')) return;
-        await deleteLoginSlide(id);
-        fetchSlides();
+    const handleDelete = (id: string) => {
+        requireConfirm(
+            'Hapus Slide',
+            'Hapus slide ini?',
+            async () => {
+                await deleteLoginSlide(id);
+                fetchSlides();
+            }
+        );
     };
 
     const handleToggleActive = async (slide: Slide) => {
@@ -290,6 +318,21 @@ export function LoginSlidesManagement() {
                     💡 Tip: Hanya slide yang <strong>Aktif</strong> yang akan tampil di halaman login. Gunakan kolom <strong>Urutan</strong> untuk mengatur urutan tampil slide.
                 </p>
             )}
+
+            <Dialog open={confirmState.isOpen} onOpenChange={(isOpen) => !confirmState.isLoading && setConfirmState(prev => ({ ...prev, isOpen }))}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{confirmState.title}</DialogTitle>
+                        <DialogDescription>{confirmState.message}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} disabled={confirmState.isLoading}>Batal</Button>
+                        <Button variant="default" onClick={executeConfirm} disabled={confirmState.isLoading}>
+                            {confirmState.isLoading ? 'Memproses...' : 'Ya, Lanjutkan'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

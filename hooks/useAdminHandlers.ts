@@ -30,6 +30,7 @@ interface UseAdminHandlersOptions {
     fetchPacks: (force?: boolean) => Promise<void>;
     fetchQuestions: (force?: boolean) => Promise<void>;
     setTabLoadingFor: (key: string, loading: boolean) => void;
+    requireConfirm: (title: string, message: string, onConfirm: () => void | Promise<void>) => void;
 }
 
 export function useAdminHandlers({
@@ -41,6 +42,7 @@ export function useAdminHandlers({
     fetchPacks,
     fetchQuestions,
     setTabLoadingFor,
+    requireConfirm,
 }: UseAdminHandlersOptions) {
     // Manual Add/Edit State for Questions
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,38 +101,51 @@ export function useAdminHandlers({
         fetchClasses(true);
     };
 
-    const handleDeleteClass = async (id: string) => {
-        if (confirm("Delete class? Users in this class will be unassigned.")) {
-            await deleteClass(id);
-            fetchClasses(true);
-        }
+    const handleDeleteClass = (id: string) => {
+        requireConfirm(
+            "Hapus Kelas",
+            "Delete class? Users in this class will be unassigned.",
+            async () => {
+                await deleteClass(id);
+                fetchClasses(true);
+            }
+        );
     };
 
     // --- User Management ---
-    const handleDeleteUser = async (id: string) => {
-        if (confirm("Are you sure you want to delete this user?")) {
-            await deleteUser(id);
-            fetchUsers(true);
-        }
-    };
-
-    const handleBulkDeleteUsers = async (ids: string[]) => {
-        if (ids.length === 0) return;
-        if (!confirm(`Hapus ${ids.length} siswa yang dipilih? Tindakan ini tidak bisa dibatalkan.`)) return;
-        setTabLoadingFor('USERS', true);
-        try {
-            const result = await bulkDeleteUsers(ids);
-            if (result.error) {
-                alert(`Gagal: ${result.error}`);
-            } else {
+    const handleDeleteUser = (id: string) => {
+        requireConfirm(
+            "Hapus Siswa",
+            "Are you sure you want to delete this user?",
+            async () => {
+                await deleteUser(id);
                 fetchUsers(true);
             }
-        } catch (e) {
-            logger.error(e);
-            alert('Terjadi kesalahan saat menghapus siswa.');
-        } finally {
-            setTabLoadingFor('USERS', false);
-        }
+        );
+    };
+
+    const handleBulkDeleteUsers = (ids: string[]) => {
+        if (ids.length === 0) return;
+        requireConfirm(
+            "Hapus Banyak Siswa",
+            `Hapus ${ids.length} siswa yang dipilih? Tindakan ini tidak bisa dibatalkan.`,
+            async () => {
+                setTabLoadingFor('USERS', true);
+                try {
+                    const result = await bulkDeleteUsers(ids);
+                    if (result.error) {
+                        alert(`Gagal: ${result.error}`);
+                    } else {
+                        fetchUsers(true);
+                    }
+                } catch (e) {
+                    logger.error(e);
+                    alert('Terjadi kesalahan saat menghapus siswa.');
+                } finally {
+                    setTabLoadingFor('USERS', false);
+                }
+            }
+        );
     };
 
     const handleSaveManualUser = async () => {
@@ -153,11 +168,15 @@ export function useAdminHandlers({
         fetchPacks(true);
     };
 
-    const handleDeletePack = async (id: string) => {
-        if (confirm("Delete this exam pack? All questions will be deleted too.")) {
-            await deletePack(id);
-            fetchPacks(true);
-        }
+    const handleDeletePack = (id: string) => {
+        requireConfirm(
+            "Hapus Paket Ujian",
+            "Delete this exam pack? All questions will be deleted too.",
+            async () => {
+                await deletePack(id);
+                fetchPacks(true);
+            }
+        );
     };
 
     const handleToggleActive = async (pack: QuizPack) => {
@@ -165,19 +184,23 @@ export function useAdminHandlers({
         fetchPacks(true);
     };
 
-    const handleDuplicatePack = async (pack: QuizPack) => {
-        if (!confirm("Duplicate this exam pack and all its questions?")) return;
+    const handleDuplicatePack = (pack: QuizPack) => {
+        requireConfirm(
+            "Duplikasi Paket Ujian",
+            "Duplicate this exam pack and all its questions?",
+            async () => {
+                const newId = generateId();
+                const newToken = generateId().substring(0, 6).toUpperCase();
+                const result = await duplicatePack(pack.id, newId, `${pack.name} (Copy)`, newToken);
 
-        const newId = generateId();
-        const newToken = generateId().substring(0, 6).toUpperCase();
-        const result = await duplicatePack(pack.id, newId, `${pack.name} (Copy)`, newToken);
+                if (result.error) {
+                    alert(`Gagal menduplikasi: ${result.error}`);
+                    return;
+                }
 
-        if (result.error) {
-            alert(`Gagal menduplikasi: ${result.error}`);
-            return;
-        }
-
-        fetchPacks(true);
+                fetchPacks(true);
+            }
+        );
     };
 
     const handleImportQuestionsFromPack = async (targetPackId: string, sourcePackId: string) => {
@@ -265,16 +288,20 @@ export function useAdminHandlers({
         setManualPackId(q.packId);
     };
 
-    const handleDeleteQuestion = async (id: string) => {
-        if (confirm("Delete question?")) {
-            const q = questions.find(q => q.id === id);
-            if (q) {
-                const urls = extractUploadUrls(q.text, q.stimulus, ...(q.options as string[]));
-                if (urls.length > 0) deleteUploadFiles(urls);
+    const handleDeleteQuestion = (id: string) => {
+        requireConfirm(
+            "Hapus Soal",
+            "Delete question?",
+            async () => {
+                const q = questions.find(q => q.id === id);
+                if (q) {
+                    const urls = extractUploadUrls(q.text, q.stimulus, ...(q.options as string[]));
+                    if (urls.length > 0) deleteUploadFiles(urls);
+                }
+                await deleteQuestion(id);
+                fetchQuestions(true);
             }
-            await deleteQuestion(id);
-            fetchQuestions(true);
-        }
+        );
     };
 
     const resetManualForm = () => {

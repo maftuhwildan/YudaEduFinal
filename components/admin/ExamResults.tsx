@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
     Download, ArrowUpDown, ChevronUp, ChevronDown, RotateCcw, Filter,
     Trash2, X, CheckSquare
@@ -51,7 +52,26 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
 }) => {
     const [resultClassFilter, setResultClassFilter] = useState<string>('ALL');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [bulkLoading, setBulkLoading] = useState(false);
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void | Promise<void>;
+        isLoading?: boolean;
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+    const requireConfirm = (title: string, message: string, onConfirm: () => void | Promise<void>) => {
+        setConfirmState({ isOpen: true, title, message, onConfirm, isLoading: false });
+    };
+
+    const executeConfirm = async () => {
+        setConfirmState(prev => ({ ...prev, isLoading: true }));
+        try {
+            await confirmState.onConfirm();
+        } finally {
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+        }
+    };
 
     // Get pack results — support both existing packs (by ID) and deleted packs (by name)
     const packResults = useMemo(() => {
@@ -229,31 +249,31 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
     };
 
     // Bulk action handlers
-    const handleBulkDelete = async () => {
+    const handleBulkDelete = () => {
         if (selectedIds.size === 0) return;
-        if (!confirm(`Hapus ${selectedIds.size} result yang dipilih? Tindakan ini tidak bisa dibatalkan.`)) return;
-        setBulkLoading(true);
-        try {
-            await onBulkDeleteResults(Array.from(selectedIds));
-            clearSelection();
-        } finally {
-            setBulkLoading(false);
-        }
+        requireConfirm(
+            'Hapus Hasil Ujian',
+            `Hapus ${selectedIds.size} result yang dipilih? Tindakan ini tidak bisa dibatalkan.`,
+            async () => {
+                await onBulkDeleteResults(Array.from(selectedIds));
+                clearSelection();
+            }
+        );
     };
 
-    const handleBulkRetake = async () => {
+    const handleBulkRetake = () => {
         const uniqueUserIds = [...new Set(
             filteredResults.filter(r => selectedIds.has(r.id)).map(r => r.userId)
         )];
         if (uniqueUserIds.length === 0) return;
-        if (!confirm(`Izinkan ${uniqueUserIds.length} siswa untuk mengerjakan ujian ulang?`)) return;
-        setBulkLoading(true);
-        try {
-            await onBulkResetUserAttempts(uniqueUserIds, selectedResultPackId);
-            clearSelection();
-        } finally {
-            setBulkLoading(false);
-        }
+        requireConfirm(
+            'Izinkan Ujian Ulang',
+            `Izinkan ${uniqueUserIds.length} siswa untuk mengerjakan ujian ulang?`,
+            async () => {
+                await onBulkResetUserAttempts(uniqueUserIds, selectedResultPackId);
+                clearSelection();
+            }
+        );
     };
 
     return (
@@ -358,7 +378,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                     size="sm"
                                     className="text-amber-600 border-amber-300 hover:bg-amber-50 hover:text-amber-700"
                                     onClick={handleBulkRetake}
-                                    disabled={bulkLoading}
+                                    disabled={confirmState.isLoading}
                                 >
                                     <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                                     Retake ({[...new Set(filteredResults.filter(r => selectedIds.has(r.id)).map(r => r.userId))].length} siswa)
@@ -369,13 +389,13 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                     size="sm"
                                     className="text-destructive border-destructive/30 hover:bg-destructive/10"
                                     onClick={handleBulkDelete}
-                                    disabled={bulkLoading}
+                                    disabled={confirmState.isLoading}
                                 >
                                     <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                                     Hapus ({selectedIds.size})
                                 </Button>
 
-                                <Button variant="ghost" size="sm" onClick={clearSelection} disabled={bulkLoading}>
+                                <Button variant="ghost" size="sm" onClick={clearSelection} disabled={confirmState.isLoading}>
                                     <X className="w-3.5 h-3.5 mr-1" /> Batal
                                 </Button>
                             </div>
@@ -503,11 +523,15 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="text-muted-foreground hover:text-amber-500"
-                                                                onClick={async () => {
-                                                                    if (confirm(`Izinkan ${r.username} untuk mengerjakan ujian ulang?`)) {
-                                                                        await resetUserAttempts(r.userId, selectedResultPackId);
-                                                                        refreshData();
-                                                                    }
+                                                                onClick={() => {
+                                                                    requireConfirm(
+                                                                        'Izinkan Retake',
+                                                                        `Izinkan ${r.username} untuk mengerjakan ujian ulang?`,
+                                                                        async () => {
+                                                                            await resetUserAttempts(r.userId, selectedResultPackId);
+                                                                            refreshData();
+                                                                        }
+                                                                    );
                                                                 }}
                                                                 title="Izinkan Retake"
                                                             >
@@ -540,10 +564,14 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                                             variant="ghost"
                                                             size="icon"
                                                             className="text-muted-foreground hover:text-destructive"
-                                                            onClick={async () => {
-                                                                if (confirm(`Hapus result ${r.username} (Score: ${Number(r.score).toFixed(2)})?`)) {
-                                                                    await onDeleteResult(r.id);
-                                                                }
+                                                            onClick={() => {
+                                                                requireConfirm(
+                                                                    'Hapus Result',
+                                                                    `Hapus result ${r.username} (Score: ${Number(r.score).toFixed(2)})?`,
+                                                                    async () => {
+                                                                        await onDeleteResult(r.id);
+                                                                    }
+                                                                );
                                                             }}
                                                             title="Hapus Result"
                                                         >
@@ -584,6 +612,21 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                     />
                 );
             })()}
+
+            <Dialog open={confirmState.isOpen} onOpenChange={(isOpen) => !confirmState.isLoading && setConfirmState(prev => ({ ...prev, isOpen }))}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{confirmState.title}</DialogTitle>
+                        <DialogDescription>{confirmState.message}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} disabled={confirmState.isLoading}>Batal</Button>
+                        <Button variant="default" onClick={executeConfirm} disabled={confirmState.isLoading}>
+                            {confirmState.isLoading ? 'Memproses...' : 'Ya, Lanjutkan'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
