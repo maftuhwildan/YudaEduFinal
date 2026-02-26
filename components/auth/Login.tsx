@@ -96,7 +96,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="pl-10"
-                      placeholder="Masukkan ID / No. Absen"
+                      placeholder="Masukkan ID"
                       required
                     />
                   </div>

@@ -25,7 +25,7 @@ export function LoginForm({
               id="username"
               name="username"
               type="text"
-              placeholder="Masukkan ID / No. Absen"
+              placeholder="Masukkan ID"
               className="pl-10"
               required
             />
