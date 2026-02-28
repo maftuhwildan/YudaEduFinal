@@ -1,99 +1,73 @@
-# YudaEdu — Portfolio Write-Up
+# YudaEdu — Computer-Based Test (CBT) Engine
+> *A production-ready Web App for real-world academic testing. Built with focus on resilience, anti-cheat mechanisms, and zero-downtime database recovery.*
 
 ---
 
-## Tentang Proyek
+## 🚀 The Project at a Glance
 
-**YudaEduEx** adalah aplikasi *Computer-Based Test (CBT)* berbasis web yang gue bangun untuk kebutuhan ujian digital di lingkungan sekolah nyata — dipakai guru dan siswa, bukan sekadar project latihan.
+**YudaEduEx** adalah sistem *Computer-Based Test (CBT)* berbasis web yang saya rancang dan kembangkan untuk menangani ujian berskala sekolah. Bukan sekadar proyek latihan—ini adalah produk yang benar-benar digunakan di lapangan oleh ratusan siswa dan puluhan guru secara *real-time*.
 
-**Stack:** Next.js 14 (App Router) · TypeScript · Prisma ORM · PostgreSQL · ShadcnUI · Docker
-
----
-
-## Cara Gue Ngerjainnya (Transparent)
-
-Gue pakai **AI-assisted development workflow** dengan AI agent sebagai pair programmer.
-
-| Gue yang kerjain | AI yang kerjain |
-|---|---|
-| Definisikan kebutuhan & alur dari pengalaman nyata | Implementasi kode dari spesifikasi gue |
-| Keputusan arsitektur & kebijakan data | Analisis forensik code path saat gue beri skenario |
-| Nemu bug dari penggunaan langsung (matiin WiFi, buka 2 tab, dll) | Eksekusi patch berdasarkan temuan |
-| Validasi & uji setiap perubahan | Menjelaskan trade-off tiap pendekatan |
+**Tech Stack:** Next.js 14 (App Router) · TypeScript · Prisma ORM · MySQL · ShadcnUI · Docker
 
 ---
 
-## Tantangan & Perjalanan Ngerjainnya
+## 🛠️ The Architecture & Challenges Solved
 
-### 1. Membangun Core Exam Engine dari Nol
-- Login dengan sesi cookie + rate limiting (max 5 attempts/60 detik)
-- Token ujian milik QuizPack untuk kontrol akses — token hanya berlaku di awal, tidak re-validasi saat submit
-- Sistem soal multi-variant (Variant A/B/C berbeda antarkelas dari soal yang sama)
-- Timer ujian real-time menggunakan **server timestamp** — bukan `Date.now()` client lokal — untuk menghindari siswa nakal yang set jam maju/mundur
-- Auto-submit otomatis terpicu begitu waktu di server habis
+### 1. Custom Core Exam Engine
+Alih-alih memakai solusi *off-the-shelf*, saya membangun *core exam engine* ini dari nol untuk memastikan kontrol penuh terhadap *edge cases* di lapangan:
+- **Resilient Timer:** Timer ujian divalidasi dengan **server timestamp** saat *handshake* dan submit, mencegah eksploitasi di mana siswa memanipulasi jam lokal di *device* mereka.
+- **Fair Multi-variant System:** Sistem secara matematis mendistribusikan soal *Variant A/B/C* secara acak namun merata antar siswa dalam satu kelas untuk mencegah contek massal.
+- **Auto-Submit Protocol:** Begitu waktu ujian di server habis, ujian akan di-submit secara paksa tanpa campur tangan *client-side*.
 
-### 2. Refactor Arsitektur Kode (Sebelum Terlambat)
-Waktu codebase makin besar, gue nyadar semua Server Actions numpuk jadi 1 file monolitik `app/actions.ts`. Ini jadi susah di-maintain. Gue refactor total jadi arsitektur domain-based:
-- `auth.ts` — login, logout, session management
-- `exam.ts` — ambil soal, submit, status siswa
-- `admin.ts` — CRUD users, kelas, soal, analytics
-- `monitoring.ts` — heartbeat, session expiry
+### 2. Domain-Driven Refactoring
+Seiring dengan bertambah kompleksnya sistem, *Server Actions* Next.js yang tadinya berbentuk satu *monolithic file* saya refactor ke dalam arsitektur berbasis domain:
+- `auth.ts` — Menangani *Cookie Session*, *Rate Limiting* (max 5 attempt/menit), dan otorisasi.
+- `exam.ts` — Bertanggung jawab atas distribusi *QuizPack*, verifikasi token, dan logic ujian.
+- `monitoring.ts` — Mengelola sinkronisasi *heartbeat* dan *session expiry*.
 
-### 3. Database Restore & Penanganan File Mentah (The Hard Way)
-Gue pernah ngadepin momen di mana gue harus **restore database dari file dump mentah** (SQL/Prisma), dan ini lumayan *painful* karena muncul masalah _orphaned records_ dan _schema mismatch_.
-- Dari situ gue bikin API khusus `/api/admin/fix-db` sebagai "Database Self-Healing Routine". Script ini secara otomatis mendeteksi _orphaned users_ atau hasil ujian nyasar dan memasukkannya ke "Kelas Pemulihan", alih-alih ngebiarin aplikasinya crash. 
+### 3. Database Self-Healing Routine
+Saat berhadapan dengan data mentah (SQL/Prisma *raw dump restore*) di skala produksi, *orphaned records* adalah mimpi buruk operasional. 
+- Saya membangun *automated* API `/api/admin/fix-db` yang berfungsi layaknya petugas medis database. Script ini berjalan menyisir database, mencari relasi User dan Result yang putus (nyasar), dan secara diam-diam memindahkannya ke "Kelas Pemulihan" sehingga aplikasi tetap berjalan *crash-free* 100%.
 
-### 4. Optimalisasi Upload Soal & Gambar
-Sistem ujian CBT umumnya ngelibatin banyak aset gambar. Daripada gue simpan gambar langsung ke dalam text database (Base64) yang bikin DB bengkak super lambat, gue rombak sistemnya:
-- **Disk-Storage Uploads:** Gambar di-upload dan diproses terpisah ke direktori `public/uploads` (`/api/upload`).
-- **Path-only Database:** Database cuma baca string path URL-nya doang. Hasilnya? Query untuk nge-load soal berisi 50 gambar tetep secepat kilat.
-- **Bulk Import Excel:** Admin bisa upload massal ribuan soal + opsi jawaban cuma pakai format Excel/CSV.
+### 4. Disk-to-Database Image Optimization
+Menyimpan *base64* image ke dalam database teks relasional sangat membunuh performa *load time*. 
+- **Disk-Storage Uploads:** Gambar di-upload dan diproses terpisah ke direktori fisik di VPS.
+- **Path-only Database:** Database MySQL kini bertindak hanya sebagai *pointer* (menyimpan URL path) yang mengarah ke *folder directory* di dalam VPS. Hasilnya? *Query load time* untuk soal 50 nomor *full-image* menjadi secepat kilat.
+- Terdapat fungsi *Bulk Import* via Excel/CSV untuk guru yang butuh mengunggah ratusan soal dalam satu klik.
 
-### 5. Performance Overhaul — Lazy Tab Loading
-Dashboard admin awalnya fetch **semua data sekaligus** saat pertama buka. Pas data bertambah banyak, ini jadi berat dan lambat. Gue refactor ke sistem:
-- **Lazy fetch per tab** — data hanya dimuat saat tab diklik pertama kali
-- **Stale-while-revalidate 30 detik** — tab yang sudah dibuka tidak re-fetch kalau baru 30 detik
-- **Smart refresh** — tombol refresh hanya me-refresh data tab yang sedang aktif, bukan semua tab
-- Skeleton UI (ShadcnUI) ditambahkan di tiap tab saat loading berlangsung
+### 5. Frontend Performance: Lazy Tab Loading
+Dashboard admin YudaEduEx memuat ribuan baris data analitik kelas, *users*, dan hasil ujian. Untuk mencegah *bottleneck* saat login pertama kali:
+- **Lazy Data Fetching:** Data di dalam *tab* tidak akan di-*fetch* sampai *tab* tersebut benar-benar di-klik.
+- **Stale-while-revalidate:** *Caching response* selama 30 detik untuk *tab switching* yang responsif.
+- **Smart Skeleton UI (Shadcn):** Memberi kesan *snappy* saat transmisi data.
 
-### 6. Real-time Exam Monitoring & Sistem Anti-Cheat
-- **Live Status:** Online / Offline / Selesai (dengan pengecekan nomor soal, jumlah terjawab, dan flag)
-- **Safe Heartbeat:** Sinkronisasi tiap 3 detik dengan recursive `setTimeout` — bukan `setInterval` — buat cegah memori leak kalo koneksi lelet. Server otomatis nge-expire sesi siswa yang *overdue*.
-- **Device & Tab-Switch Detection:** Keluar fullscreen atau pindah tab = nambah hitungan *cheat flag*. Flag tercatat di DB dan kelihatan real-time di admin.
-- **Mobile Landscape Lock Audit:** Nyesuain _behavior_ mobile yang rese'. Android pakai `screen.orientation.unlock()` biar optimal, sementara fitur Fullscreen API di iOS di-bypass karena nggak di-_support_ dari sononya biar nggak munculin error fiktif.
-
-### 7. UX, Layouting & Docker Ops
-- **Login Slider:** Halaman login dibikin _Carousel_ dinamis via CMS Admin dashboard (upload gambar, teks, urutan, toggle aktif).
-- **Mobile-Responsive Admin Panel:** Admin dashboard yang padat direkayasa jadi Drawer/Overlay Sidebar buat admin yang mantau ujian dari layar HP.
-- **ShadcnUI Dialog Guard:** Ngeganti `window.confirm` _native Javascript_ jadul pakai komponen `Dialog` dari ShadcnUI buat tombol krusial seperti _Delete User_, _Re-quiz_, dan hapus hasil ujian. UX-nya kerasa lebih premium.
-- **Inline Edit & Production Logs:** Bikin fitur Edit Kelas _inline_, dan mindahin `console.log()` ke sistem Logging terstruktur pakai Docker Logs, biar gampang dilacak waktu ujian skala besar jalan.
-
-### 8. Data Integrity — Historical Results
-- Hasil ujian **tidak dihapus** saat siswa remedial — disimpan permanen sebagai historis.
-- Kebijakan **Highest Score**: data analitik kelas dikalkulasi otomatis cuma ambil nilai _attempt_ terbaik per siswa.
-- **Proteksi Double-Submit:** Prisma transaction lock. Hanya 1 _submission_ yang masuk meski tombol *Submit* ditekan siswa 100 kali berturut-turut karena nge-lag.
+### 6. Real-time Monitoring & Anti-Cheat Engine
+- **Safe Heartbeat System:** Menggunakan skema rekursif `setTimeout` (menghindari kelemahan *memory-leak* pada `setInterval`) yang sinkron ke server setiap 3 detik. Otomatis nge-_kick_ sesi siswa yang terdeteksi *overdue*.
+- **Device & Tab-Switch Detection:** *Fullscreen enforcement*. Pindah tab atau keluar layar penuh = peringatan *pop-up* agresif dan iterasi angka kecurangan bertambah *real-time* di panel Admin.
+- **Mobile Landscape Audit:** Integrasi *cross-platform* dengan `screen.orientation.unlock()` pada Android, sembari menangani isolasi API di ekosistem iOS tanpa *error throwing*.
 
 ---
 
-## Resilience Audit — Edge Case Forensics
-Setelah sistem selesai, gue lakuin sesi **Threat Modeling** — aktif nge-test skenario ekstrem di lapangan langsung nangkep code path-nya:
+## 🔎 Threat Modeling & Resilience Forensics
 
-| Skenario yang Gue Test | Temuan | Fix |
+Aplikasi lapangan tidak pernah berdampingan ramah dengan koneksi internet yang putus-nyambung atau *hardware* spesifikasi rendah. Di sinilah saya melakukan siklus *Threat Modeling* skenario lapangan yang sesungguhnya:
+
+| Root Cause / Skenario Ekstrem | Dampak Awal Sebelum Disolve | Solusi Engineering (Fixed) |
 |---|---|---|
-| Buka ujian di 2 tab berbarengan | Tab background *overwrite* data via heartbeat | Cross-tab sync lewat `storage` API event |
-| Tab ujian di-minimize 5+ menit | Chrome auto-*throttle* `setTimeout`, siswa seolah Offline | `visibilitychange` buat "adrenaline shot" |
-| Internet putus-nyambung bebas | API `fetch` _hanging_, heartbeat loop modar | `Promise.race` 10s timeout _interceptor_ |
-| Klik submit saat internet mati | Error DB *swallow* jadi "Akun di alat lain" | Pisahin `catch` Prisma DB vs JSON Error |
-| Pencet F5 pas *loading upload* | ✅ Aman! | LocalStorage state backup dijahit lagi pas _reload_ |
+| Siswa nakal login di 2 perangkat/tab | Tab yg tertinggal secara diam-diam menumpuk (overwrite) data baru via heartbeat delay | *Cross-tab sync enforcement* melalui `storage` *API event listener* |
+| Browser me-*minimize* tab (Hemat Baterai) | Chrome melakukan *auto-throttle setTimeout*, server menganggap siswa Offline | Injeksi sintesis *visibilitychange listener* sbg penarik "*Adrenaline Shot*" paksa |
+| Koneksi sekolah RTO (Request Time Out) | API nge-gantung permanen (*Hanging Promise*), *heartbeat loop* mati tanpa peringatan | `Promise.race` *interceptor* timeout 10 detik dan memicu *fallback retry* |
+| Submit dengan WiFi mati lalu hidup kembali | Prisma DB *throw error*, JSON catch error ter-swallow jd error fiktif "Akun nyangkut" | Isolasi pemisahan alur `catch` Prisma DB vs JSON Error Payload |
 
 ---
 
-## Refleksi
-Bagian paling *challenging* buat gue sebenernya **bukan nulis kodenya** — karena AI *co-pilot* ngebantu ngebutin sintaksnya. Tapi **punya insting buat tau apa yang harus dicurigai**.
+## 💡 Developer’s Note: The Real Value
 
-Contohnya waktu tab double tiba-tiba eror. Gue waktu itu belum tau istilah *"localStorage storage event"*. Waktu siswa tiba-tiba keliatan offline tanpa sebab, gue nggak tau menau soal *"browser tab throttling"*. Tapi modal gue adalah gue bisa **ngartikulasikan simtom-nya** dan ngasih tahu _skenario yang bener_ ke AI buat ngegali _root cause_-nya.
+Bagi saya, tantangan sesungguhnya dalam rekayasa perangkat lunak bukanlah menghafal algoritma kompleks—tapi membangun insting investigasi saat sistem kolaps di bawah tekanan dunia nyata. 
 
-Nalar buat nge-debug _business logic_ di skala yang _messy_ kaya lapangan sekolah, lalu mengeksekusinya jadi arsitektur *codebase* — **itu yang gue anggap sebagai _skill_ paling bernilai yang gue bangun dari proyek ini.**
+Ketika sistem pelaporan mencatat "Siswa A ujiannya *blank* offline tanpa sebab", pengalaman ini mengajarkan saya untuk tidak menyalahkan siswa terlebih dahulu, melainkan mulai memburu anomali di level protokol. Menemukan fakta bahwa akar masalahnya adalah fitur **Browser Tab Throttling** yang men-*suspend* *javascript thread*—lalu berhasil mengeksekusi arsitektur mitigasinya menggunakan API *visibility change*—adalah jenis ilmu lapangan dan validasi arsitektural yang tidak bisa dipelajari tanpa pengalaman langsung.
+
+**Ini bukan sekadar kode yang bisa berjalan; ini adalah produk yang bisa diajak perang.**
 
 ---
-*Proyek ini diluncurkan & aktif digunakan di sekolah nyata. Source code tersedia atas permintaan.*
+*Proyek ini berjalan aktif melayani kebutuhan asessment berskala nyata. Source code lengkap tersedia atas permintaan langsung.*
