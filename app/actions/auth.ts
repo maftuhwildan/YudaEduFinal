@@ -115,8 +115,15 @@ export async function login(formData: FormData) {
         });
         return { success: true, user: sessionData };
     } catch (e: any) {
+        // Refund rate limit attempt on server error
+        const entry = loginAttempts.get(username);
+        if (entry && entry.count > 0) {
+            entry.count--;
+        }
+
         logger.error('Login error:', e);
-        return { error: e.message || 'Terjadi kesalahan saat login' };
+        // Do not leak technical details like e.message to the client
+        return { error: 'Gagal memproses data masuk. Pastikan koneksi stabil.' };
     }
 }
 
@@ -144,21 +151,27 @@ export async function logout() {
 // How often to re-validate session token against the database (ms).
 // Between validations, the cookie is trusted (like the old YudaEdu version).
 // This keeps the "kick session" feature working while drastically reducing DB load.
-const SESSION_REVALIDATE_MS = 60_000; // 60 seconds
+const SESSION_REVALIDATE_MS = 15_000; // 15 seconds
 
 export async function getSession() {
     const sessionCookie = (await cookies()).get('session');
     if (!sessionCookie) return null;
 
+    let data: any;
     try {
-        const data = JSON.parse(sessionCookie.value);
-        if (!data?.id || !data?.sessionToken) return null;
+        data = JSON.parse(sessionCookie.value);
+    } catch {
+        return null; // Bad cookie format
+    }
 
-        const now = Date.now();
-        const lastValidated = data._lastValidated || 0;
+    if (!data?.id || !data?.sessionToken) return null;
 
-        // Only hit the DB if enough time has passed since last validation
-        if (now - lastValidated > SESSION_REVALIDATE_MS) {
+    const now = Date.now();
+    const lastValidated = data._lastValidated || 0;
+
+    // Only hit the DB if enough time has passed since last validation
+    if (now - lastValidated > SESSION_REVALIDATE_MS) {
+        try {
             const user = await prisma.user.findUnique({
                 where: { id: data.id },
                 select: { sessionToken: true }
@@ -169,25 +182,29 @@ export async function getSession() {
                 (await cookies()).delete('session');
                 return null;
             }
-
-            // Refresh the cookie with updated validation timestamp
-            const refreshed = { ...data, _lastValidated: now };
-            (await cookies()).set('session', JSON.stringify(refreshed), {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                path: '/',
-                maxAge: 60 * 60 * 24,
-            });
-
-            return refreshed;
+        } catch (dbError) {
+            // 🚨 CRITICAL FIX: If Prisma fails (e.g., Network DB connection loss on localhost),
+            // DO NOT swallow the error and return null! Returning null causes the frontend
+            // to falsely throw "Unauthorized" and kick the user out with a multi-device alert.
+            // Throw the actual DB error so Next.js handles it as a standard fetch failure.
+            throw dbError;
         }
 
-        // Within revalidation window — trust the cookie (no DB query)
-        return data;
-    } catch {
-        return null;
+        // Refresh the cookie with updated validation timestamp
+        const refreshed = { ...data, _lastValidated: now };
+        (await cookies()).set('session', JSON.stringify(refreshed), {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24,
+        });
+
+        return refreshed;
     }
+
+    // Within revalidation window — trust the cookie (no DB query)
+    return data;
 }
 
 // --- Admin Profile Update ---

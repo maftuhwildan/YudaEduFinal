@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 
 interface UseAntiCheatOptions {
     active: boolean;                  // Only activate when stage === 'QUIZ'
@@ -17,8 +17,15 @@ export function useAntiCheat({
     onCheat,
     onFullscreenChange,
 }: UseAntiCheatOptions) {
+    const lastWarningTime = useRef<number>(0);
+
     const triggerWarning = useCallback(
         (msg: string, incrementCount: boolean) => {
+            const now = Date.now();
+            // Cooldown 1.5 detik: Cegah event blur & visibilitychange menumpuk barengan saat ALT+TAB
+            if (now - lastWarningTime.current < 1500) return;
+
+            lastWarningTime.current = now;
             onCheat(msg, incrementCount);
         },
         [onCheat]
@@ -44,7 +51,7 @@ export function useAntiCheat({
         };
 
         const handleBlur = () => {
-            if (!showCheatWarning && isFullscreen) {
+            if (!showCheatWarning) {
                 triggerWarning('Fokus hilang! Harap tetap di layar ujian.', true);
             }
         };

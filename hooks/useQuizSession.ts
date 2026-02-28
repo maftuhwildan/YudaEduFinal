@@ -4,13 +4,24 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { SessionUser, Question, QuizPack } from '@/types';
 import { getAvailablePacks, getQuizData, submitQuizResult } from '@/app/actions/exam';
 import { updateSession, getUserPackSession } from '@/app/actions/monitoring';
+import { useQuizTimer } from './useQuizTimer';
 
 // --- localStorage helpers for answer backup (survives refresh & network failures) ---
 const LS_PREFIX = 'yudaedu_quiz_';
 function backupAnswers(packId: string, answers: Record<string, string>) {
-    try { localStorage.setItem(`${LS_PREFIX}answers_${packId}`, JSON.stringify(answers)); } catch { }
+    // Save answers with a timestamp so we know EXACTLY when each was picked
+    try {
+        const payload: Record<string, { val: string, ts: number }> = {};
+        const now = Date.now();
+        for (const [qId, val] of Object.entries(answers)) {
+            // We don't have individual timestamps in state, but saving the backup 
+            // happens immediately on click, so `now` is accurate enough.
+            payload[qId] = { val, ts: now };
+        }
+        localStorage.setItem(`${LS_PREFIX}answers_${packId}`, JSON.stringify(payload));
+    } catch { }
 }
-function restoreAnswers(packId: string): Record<string, string> | null {
+function restoreAnswers(packId: string): Record<string, { val: string, ts: number }> | null {
     try {
         const raw = localStorage.getItem(`${LS_PREFIX}answers_${packId}`);
         return raw ? JSON.parse(raw) : null;
@@ -20,7 +31,7 @@ function clearBackup(packId: string) {
     try { localStorage.removeItem(`${LS_PREFIX}answers_${packId}`); } catch { }
 }
 
-type Stage = 'SELECT_PACK' | 'TOKEN' | 'QUIZ' | 'ERROR';
+type Stage = 'SELECT_PACK' | 'TOKEN' | 'QUIZ' | 'ERROR' | 'EXPIRED';
 
 interface UseQuizSessionOptions {
     user: SessionUser;
@@ -45,6 +56,7 @@ export function useQuizSession({
     const [tokenInput, setTokenInput] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [existingSession, setExistingSession] = useState<any>(null);
+    const [isCheckingSession, setIsCheckingSession] = useState(false);
 
     const [questions, setQuestions] = useState<Question[]>([]);
     const [pack, setPack] = useState<QuizPack | null>(null);
@@ -54,12 +66,37 @@ export function useQuizSession({
     const [cheatCount, setCheatCount] = useState(0);
 
     const isSubmittingRef = useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const kickedRef = useRef(false);
     const [submitFailed, setSubmitFailed] = useState(false);
     const [submitRetryCount, setSubmitRetryCount] = useState(0);
+
+    // Refs for live state (crucial for timeout auto-submit)
     const answersRef = useRef(answers);
-    const currentIndexRef = useRef(currentIndex);
     const cheatCountRef = useRef(cheatCount);
+    const currentIndexRef = useRef(currentIndex);
+
+    // Keep refs in sync for heartbeat (avoids stale closures)
+    useEffect(() => { answersRef.current = answers; }, [answers]);
+    useEffect(() => { cheatCountRef.current = cheatCount; }, [cheatCount]);
+    useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
+
+    // Forward declare executeSubmission so it can be used in onExpire
+    const executeSubmissionRef = useRef<((isRetry?: boolean) => Promise<void>) | null>(null);
+
+    useQuizTimer({
+        active: stage === 'QUIZ',
+        onExpire: () => {
+            // FIRE ALARM: Time is up! 
+            // We forcefully submit the LIVE React state right now,
+            // bypassing the stale 15-second heartbeat cache to prevent data loss.
+            if (executeSubmissionRef.current) {
+                executeSubmissionRef.current();
+            } else {
+                setStage('EXPIRED');
+            }
+        },
+    });
 
     // Helper: detect session kicked from server error
     const handleSessionError = useCallback((e: any) => {
@@ -69,11 +106,6 @@ export function useQuizSession({
             onSessionKicked();
         }
     }, [onSessionKicked]);
-
-    // Keep refs in sync for heartbeat (avoids stale closures)
-    useEffect(() => { answersRef.current = answers; }, [answers]);
-    useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
-    useEffect(() => { cheatCountRef.current = cheatCount; }, [cheatCount]);
 
     // --- Load available packs on mount ---
     const loadPacks = useCallback(async () => {
@@ -106,9 +138,14 @@ export function useQuizSession({
     // --- Check for existing session when entering TOKEN stage ---
     useEffect(() => {
         if (stage === 'TOKEN' && selectedPackId && user) {
-            getUserPackSession(selectedPackId, user.id).then(session => {
-                setExistingSession(session || null);
-            });
+            setIsCheckingSession(true);
+            getUserPackSession(selectedPackId, user.id)
+                .then(session => {
+                    setExistingSession(session || null);
+                })
+                .finally(() => {
+                    setIsCheckingSession(false);
+                });
         }
     }, [stage, selectedPackId, user]);
 
@@ -154,13 +191,23 @@ export function useQuizSession({
                         : freshSession.answers)
                     : {};
 
-                // Merge with localStorage backup — prefer whichever has more answers
+                // Merge with localStorage backup — TIMESTAMP BASED (The Ultimate Source of Truth)
                 const lsBackup = restoreAnswers(p.id);
                 if (lsBackup) {
-                    const serverCount = Object.keys(initialAnswers).filter(k => !k.startsWith('_')).length;
-                    const localCount = Object.keys(lsBackup).filter(k => !k.startsWith('_')).length;
-                    if (localCount > serverCount) {
-                        initialAnswers = { ...initialAnswers, ...lsBackup };
+                    // We assume server data `freshSession.lastUpdate` is the baseline timestamp 
+                    // for all answers currently in the server.
+                    // If a specific answer in localStorage has a timestamp NEWER than the server's
+                    // last heartbeat, it means the user clicked it AFTER the last sync but before crashing.
+                    const serverTs = Number(freshSession.lastUpdate) || 0;
+
+                    for (const [qId, localData] of Object.entries(lsBackup)) {
+                        if (qId.startsWith('_')) continue;
+
+                        // Case 1: Server doesn't have this answer at all
+                        // Case 2: Server has it, but local backup is strictly NEWER than the last heartbeat
+                        if (!initialAnswers[qId] || localData.ts > serverTs) {
+                            initialAnswers[qId] = localData.val;
+                        }
                     }
                 }
 
@@ -168,7 +215,8 @@ export function useQuizSession({
                 initialIndex = freshSession.currentQuestionIndex || 0;
                 setCurrentIndex(initialIndex);
 
-                const now = Date.now();
+                // FIXED TIME DESYNC: Use Server Time as the Absolute Truth for elapsed calculation
+                const now = freshSession.serverTime || Date.now();
                 const start = Number(freshSession.startTime);
                 const limitMs = p.timeLimit * 60 * 1000;
                 const elapsed = now - start;
@@ -221,12 +269,35 @@ export function useQuizSession({
         // The heartbeat will pick up the new answers and sync them to the server.
     };
 
+    // --- Cross-Tab Sync (Ghost Tab Prevention) ---
+    useEffect(() => {
+        if (!pack?.id || stage !== 'QUIZ') return;
+
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === `${LS_PREFIX}answers_${pack.id}`) {
+                try {
+                    const latestAnswers = JSON.parse(e.newValue || '{}');
+                    setAnswers(latestAnswers);
+                } catch (err) {
+                    console.error('Failed to sync answers across tabs', err);
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, [pack?.id, stage]);
+
     // --- Submission ---
-    const executeSubmission = useCallback(async () => {
+    const executeSubmission = useCallback(async (isRetry = false) => {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
-        setSubmitFailed(false);
-        setSubmitRetryCount(0);
+        setIsSubmitting(true);
+
+        if (!isRetry) {
+            setSubmitFailed(false);
+            setSubmitRetryCount(0);
+        }
 
         // Persist answers to localStorage before attempting submit
         if (pack?.id) backupAnswers(pack.id, answersRef.current);
@@ -234,47 +305,73 @@ export function useQuizSession({
         const MAX_RETRIES = 10;
         const BACKOFF_SCHEDULE = [1000, 2000, 3000, 5000, 5000, 10000, 10000, 15000, 15000, 30000];
 
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            try {
-                const resultData = {
-                    userId: user.id,
-                    packId: pack?.id,
-                    cheatCount: cheatCountRef.current,
-                    answers: answersRef.current,
-                };
+        try {
+            const resultData = {
+                userId: user.id,
+                packId: pack?.id,
+                cheatCount: cheatCountRef.current,
+                answers: answersRef.current,
+            };
 
-                const serverResult = await submitQuizResult(resultData);
+            const serverResult = await submitQuizResult(resultData);
 
-                // Success — clear localStorage backup
-                if (pack?.id) clearBackup(pack.id);
-
-                onFinish({
-                    id: 'temp',
-                    userId: user.id,
-                    username: user.username,
-                    classId: user.classId,
-                    score: serverResult.score ?? 0,
-                    correctCount: serverResult.correctCount ?? 0,
-                    totalQuestions: serverResult.totalQuestions ?? questions.length,
-                    packName: pack?.name || '',
-                    variant: variant || 'A',
-                    timestamp: new Date().toISOString(),
-                    cheatCount: cheatCountRef.current,
-                });
-                return; // Success, exit loop
-            } catch (e) {
-                if (attempt === MAX_RETRIES) {
-                    // All retries exhausted — enable manual retry via UI
-                    setSubmitFailed(true);
-                    isSubmittingRef.current = false;
-                } else {
-                    // Wait before retrying (increasing backoff)
-                    setSubmitRetryCount(attempt);
-                    await new Promise(res => setTimeout(res, BACKOFF_SCHEDULE[attempt - 1] || 5000));
-                }
+            if (!serverResult.success) {
+                throw new Error(serverResult.error || 'Submission failed on server');
             }
+
+            // Success — clear backup & reset UI
+            if (pack?.id) clearBackup(pack.id);
+            setSubmitFailed(false);
+
+            onFinish({
+                id: 'temp',
+                userId: user.id,
+                username: user.username,
+                classId: user.classId,
+                score: serverResult.score ?? 0,
+                correctCount: serverResult.correctCount ?? 0,
+                totalQuestions: serverResult.totalQuestions ?? questions.length,
+                packName: pack?.name || '',
+                variant: variant || 'A',
+                timestamp: new Date().toISOString(),
+                cheatCount: cheatCountRef.current,
+            });
+            // Don't flip isSubmittingRef to false here because the component unmounts! 
+            // If we did, a double click during unmount could fire another API call.
+        } catch (e: any) {
+            console.error("Submission failed:", e);
+
+            // Check if we ran out of retries
+            setSubmitRetryCount(prev => {
+                const nextCount = prev + 1;
+
+                if (nextCount > MAX_RETRIES) {
+                    setSubmitFailed(true);
+                    isSubmittingRef.current = false; // 🔓 SAFE UNLOCK FOR MANUAL RETRY
+                    setIsSubmitting(false);
+                    return prev;
+                }
+
+                // 🔄 Schedule background REST-ful retry 
+                // We unlock the ref SOON right before the next execution fires
+                const delay = BACKOFF_SCHEDULE[prev] || 5000;
+                setTimeout(() => {
+                    isSubmittingRef.current = false; // Unlock for the recursive call
+                    executeSubmission(true);
+                }, delay);
+
+                return nextCount;
+            });
+            // We intentionally do NOT `finally { isSubmittingRef.current = false }` yet,
+            // because the `setTimeout` owns the lock until it triggers. 
+            // This prevents duplicate spam clicks while waiting for the delay.
         }
-    }, [questions, pack, variant, user, onFinish]);
+    }, [questions, pack, variant, user, onFinish, submitRetryCount]);
+
+    // Wire up the ref for the timer's onExpire callback
+    useEffect(() => {
+        executeSubmissionRef.current = executeSubmission;
+    }, [executeSubmission]);
 
     // --- Heartbeat sync (Safe Recursive Timeout) ---
     useEffect(() => {
@@ -292,6 +389,16 @@ export function useQuizSession({
                 ansCount: Object.keys(answersRef.current).length,
                 cheat: cheatCountRef.current
             });
+
+            // Helper to prevent hanging Promises on bad networks
+            const withTimeout = <T>(promise: Promise<T>, ms = 10000) => {
+                return Promise.race([
+                    promise,
+                    new Promise<never>((_, reject) =>
+                        setTimeout(() => reject(new Error('Network Timeout')), ms)
+                    )
+                ]);
+            };
 
             try {
                 const fullPayload = {
@@ -311,19 +418,19 @@ export function useQuizSession({
                 };
 
                 if (currentState !== lastSyncedState) {
-                    // State changed — send full update
-                    await updateSession(fullPayload);
+                    // State changed — send full update with 10s fuse
+                    await withTimeout(updateSession(fullPayload));
                     lastSyncedState = currentState;
                 } else {
-                    // Nothing changed — send minimal heartbeat to stay "online"
-                    const result = await updateSession({
+                    // Nothing changed — send minimal heartbeat with 10s fuse
+                    const result = await withTimeout(updateSession({
                         userId: user.id,
                         packId: pack.id,
                         isHeartbeatOnly: true,
-                    });
+                    }));
                     // If session was missing from DB (e.g. after DB restart), recreate it
                     if (result && (result as any).sessionMissing) {
-                        await updateSession(fullPayload);
+                        await withTimeout(updateSession(fullPayload));
                         lastSyncedState = currentState;
                     }
                 }
@@ -337,11 +444,21 @@ export function useQuizSession({
             }
         };
 
+        // --- Adrenaline Shot (Anti Browser Throttling) ---
+        // Instantly force a heartbeat the moment the student alt-tabs back to the exam.
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isRunning) {
+                syncSession();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         // Start the loop
         setTimeout(syncSession, 3000);
 
         return () => {
             isRunning = false;
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [pack, user, stage, questions.length, handleSessionError]);
 
@@ -370,7 +487,9 @@ export function useQuizSession({
         setCheatCount,
         // Submission
         executeSubmission,
+        isSubmitting,
         submitFailed,
         submitRetryCount,
+        isCheckingSession,
     };
 }

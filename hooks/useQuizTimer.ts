@@ -11,9 +11,6 @@ export function useQuizTimer({ active, onExpire }: UseQuizTimerOptions) {
     const [timeLeft, setTimeLeft] = useState(0);
     const expiredRef = useRef(false);
     const onExpireRef = useRef(onExpire);
-    // Guard: only allow expiration after timeLeft has been set to > 0 at least once.
-    // This prevents the default value of 0 from triggering auto-submit on initial render.
-    const hasBeenSetRef = useRef(false);
 
     // Keep ref current without re-triggering effects
     useEffect(() => { onExpireRef.current = onExpire; }, [onExpire]);
@@ -22,40 +19,38 @@ export function useQuizTimer({ active, onExpire }: UseQuizTimerOptions) {
     useEffect(() => {
         if (active) {
             expiredRef.current = false;
-            hasBeenSetRef.current = false;
         }
     }, [active]);
 
-    // Track when timeLeft has genuinely been set (> 0)
-    useEffect(() => {
-        if (timeLeft > 0) hasBeenSetRef.current = true;
-    }, [timeLeft]);
-
-    // Countdown interval
+    // Countdown interval (The only source of truth for expiration)
     useEffect(() => {
         if (!active) return;
 
         const timer = setInterval(() => {
             setTimeLeft(prev => {
-                if (prev <= 1) {
+                // If it's already 0 or less, do nothing to prevent negative time
+                if (prev <= 0) {
                     clearInterval(timer);
                     return 0;
                 }
-                return prev - 1;
+
+                const nextTime = prev - 1;
+
+                // Fire expiration EXACTLY as the tick hits 0 from a positive number
+                if (nextTime === 0 && !expiredRef.current) {
+                    clearInterval(timer);
+                    expiredRef.current = true;
+                    // Escape React's state transition phase to avoid 
+                    // "Cannot update a component while rendering a different component" warnings
+                    setTimeout(() => onExpireRef.current(), 0);
+                }
+
+                return nextTime;
             });
         }, 1000);
 
         return () => clearInterval(timer);
     }, [active]);
-
-    // Trigger auto-submit exactly once when time reaches 0
-    // Only if timer has been genuinely loaded (hasBeenSetRef prevents premature fire)
-    useEffect(() => {
-        if (active && timeLeft === 0 && !expiredRef.current && hasBeenSetRef.current) {
-            expiredRef.current = true;
-            onExpireRef.current();
-        }
-    }, [timeLeft, active]);
 
     return { timeLeft, setTimeLeft };
 }

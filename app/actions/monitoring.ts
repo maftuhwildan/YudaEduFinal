@@ -67,10 +67,9 @@ export async function updateSession(data: any) {
         initialAnswers._questionOrder = questionOrder;
     }
 
-    // Guard: only update answers in DB if the incoming payload actually has answer data.
-    // This prevents an accidental empty `answers: {}` from overwriting existing answers.
-    const incomingAnswerKeys = Object.keys(answers || {}).filter(k => !k.startsWith('_'));
-    const shouldUpdateAnswers = incomingAnswerKeys.length > 0 || questionOrder;
+    // Guard: only update answers in DB if the client explicitly sends an `answers` payload.
+    // We must trust the client's state, even if it's `{}` (e.g., student cleared all answers).
+    const shouldUpdateAnswers = answers !== undefined || questionOrder !== undefined;
 
     await prisma.examSession.upsert({
         where: { userId_packId: { userId, packId } },
@@ -215,6 +214,7 @@ export async function getUserPackSession(packId: string, userId: string) {
     return {
         ...session,
         startTime: session.startTime.toString(),
-        lastUpdate: session.lastUpdate.toString()
+        lastUpdate: session.lastUpdate.toString(),
+        serverTime: Date.now() // The Ultimate Source of Truth
     };
 }

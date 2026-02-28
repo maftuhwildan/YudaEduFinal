@@ -98,7 +98,11 @@ export function useAdminHandlers({
     // --- Class Management ---
     const handleCreateClass = async () => {
         if (!newClassName) return;
-        await createClass({ id: generateId(), name: newClassName });
+        const result = await createClass({ id: generateId(), name: newClassName });
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
         setNewClassName('');
         fetchClasses(true);
     };
@@ -108,7 +112,11 @@ export function useAdminHandlers({
             "Hapus Kelas",
             "Delete class? Users in this class will be unassigned.",
             async () => {
-                await deleteClass(id);
+                const result = await deleteClass(id);
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
                 fetchClasses(true);
             }
         );
@@ -121,7 +129,11 @@ export function useAdminHandlers({
 
     const handleSaveEditClass = async () => {
         if (!editingClassId || !editClassName) return;
-        await updateClass(editingClassId, editClassName);
+        const result = await updateClass(editingClassId, editClassName);
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
         setEditingClassId(null);
         setEditClassName('');
         fetchClasses(true);
@@ -138,7 +150,11 @@ export function useAdminHandlers({
             "Hapus Siswa",
             "Are you sure you want to delete this user?",
             async () => {
-                await deleteUser(id);
+                const result = await deleteUser(id);
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
                 fetchUsers(true);
             }
         );
@@ -170,7 +186,11 @@ export function useAdminHandlers({
 
     const handleSaveManualUser = async () => {
         if (!userForm.username || !userForm.password) return;
-        await createUser({ ...userForm, role: Role.USER });
+        const result = await createUser({ ...userForm, role: Role.USER });
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
         setShowUserModal(false);
         setUserForm({ fullName: '', username: '', password: '', classId: '', absentNumber: '' });
         fetchUsers(true);
@@ -179,10 +199,15 @@ export function useAdminHandlers({
     // --- Pack Management ---
     const handleSavePack = async () => {
         if (!packForm.name) return;
+        let result: any;
         if (packForm.id) {
-            await updatePack(packForm);
+            result = await updatePack(packForm);
         } else {
-            await createPack(packForm);
+            result = await createPack(packForm);
+        }
+        if (result.error) {
+            alert(result.error);
+            return;
         }
         setPackForm({ name: '', timeLimit: 60, token: '', allowedClassIds: [], randomizeQuestions: true, randomizeOptions: true, autoRotateToken: false, scheduleStart: '', scheduleEnd: '' });
         fetchPacks(true);
@@ -193,14 +218,22 @@ export function useAdminHandlers({
             "Hapus Paket Ujian",
             "Delete this exam pack? All questions will be deleted too.",
             async () => {
-                await deletePack(id);
+                const result = await deletePack(id);
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
                 fetchPacks(true);
             }
         );
     };
 
     const handleToggleActive = async (pack: QuizPack) => {
-        await updatePack({ id: pack.id, isActive: !pack.isActive });
+        const result = await updatePack({ id: pack.id, isActive: !pack.isActive });
+        if (result.error) {
+            alert(`Gagal toggle status: ${result.error}`);
+            return;
+        }
         fetchPacks(true);
     };
 
@@ -224,17 +257,26 @@ export function useAdminHandlers({
     };
 
     const handleImportQuestionsFromPack = async (targetPackId: string, sourcePackId: string) => {
-        const sourceQuestions = await getQuestionsByPack(sourcePackId);
-        if (sourceQuestions.length === 0) {
-            alert('Tidak ada soal di pack sumber.');
+        try {
+            const sourceQuestions = await getQuestionsByPack(sourcePackId);
+            if (sourceQuestions.length === 0) {
+                alert('Tidak ada soal di pack sumber.');
+                return { success: false, count: 0 };
+            }
+            for (const q of sourceQuestions) {
+                const { id, packId, ...rest } = q as any;
+                const result = await createQuestion({ ...rest, id: generateId(), packId: targetPackId });
+                if (result.error) {
+                    alert(`Beberapa soal gagal di-import: ${result.error}`);
+                    break;
+                }
+            }
+            fetchQuestions(true);
+            return { success: true, count: sourceQuestions.length };
+        } catch (e: any) {
+            alert(e.message || 'Gagal memuat soal dari sumber.');
             return { success: false, count: 0 };
         }
-        for (const q of sourceQuestions) {
-            const { id, packId, ...rest } = q as any;
-            await createQuestion({ ...rest, id: generateId(), packId: targetPackId });
-        }
-        fetchQuestions(true);
-        return { success: true, count: sourceQuestions.length };
     };
 
     const handleGenerateToken = () => {
@@ -286,6 +328,7 @@ export function useAdminHandlers({
 
         const payload = { ...manualQ, packId: manualPackId, options: manualQ.options, correctAnswer: manualQ.correctAnswer };
 
+        let result: any;
         if (editingId) {
             const oldQ = questions.find(q => q.id === editingId);
             if (oldQ) {
@@ -294,10 +337,16 @@ export function useAdminHandlers({
                 const removedUrls = oldUrls.filter(u => !newUrls.includes(u));
                 if (removedUrls.length > 0) deleteUploadFiles(removedUrls);
             }
-            await updateQuestion({ id: editingId, ...payload });
+            result = await updateQuestion({ id: editingId, ...payload });
         } else {
-            await createQuestion(payload);
+            result = await createQuestion(payload);
         }
+
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
         resetManualForm();
         fetchQuestions(true);
     };
@@ -318,7 +367,11 @@ export function useAdminHandlers({
                     const urls = extractUploadUrls(q.text, q.stimulus, ...(q.options as string[]));
                     if (urls.length > 0) deleteUploadFiles(urls);
                 }
-                await deleteQuestion(id);
+                const result = await deleteQuestion(id);
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
                 fetchQuestions(true);
             }
         );
@@ -334,11 +387,17 @@ export function useAdminHandlers({
         setIsGenerating(true);
         try {
             const newQuestions = await generateQuizQuestions(genTopic, 5, genVariant);
-            await Promise.all(newQuestions.map((q: any) => createQuestion({ ...q, packId: manualPackId })));
+            for (const q of newQuestions) {
+                const result = await createQuestion({ ...q, packId: manualPackId });
+                if (result.error) {
+                    alert(`Sebagian soal gagal disimpan: ${result.error}`);
+                    break;
+                }
+            }
             setGenTopic('');
             fetchQuestions(true);
         } catch (e) {
-            alert("AI Generation failed. Check API Key.");
+            alert("AI Generation failed. Check API Key or try again.");
         } finally {
             setIsGenerating(false);
         }
@@ -405,7 +464,7 @@ export function useAdminHandlers({
                     const cls = classes.find(c => c.name.toLowerCase() === (className || '').toString().toLowerCase());
 
                     try {
-                        await createUser({
+                        const result = await createUser({
                             id: generateId(),
                             username: username?.toString() || name?.toString(),
                             fullName: name?.toString(),
@@ -416,9 +475,16 @@ export function useAdminHandlers({
                             maxAttempts: 1,
                             currentAttempts: 0
                         });
-                        successCount++;
+
+                        // Cek apakah server return error (seperti Username Duplikat)
+                        if (result.error) {
+                            errors.push(`Baris ${rowNum}: ${result.error}`);
+                            errorCount++;
+                        } else {
+                            successCount++;
+                        }
                     } catch (err: any) {
-                        errors.push(`Baris ${rowNum}: ${err.message || 'Gagal menyimpan data'}`);
+                        errors.push(`Baris ${rowNum}: ${err.message || 'Gagal menyimpan data (System Error)'}`);
                         errorCount++;
                     }
                     setImportProgress({ current: i + 1, total: data.length });

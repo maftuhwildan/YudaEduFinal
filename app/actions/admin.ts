@@ -60,25 +60,30 @@ export async function bulkDeleteUsers(ids: string[]) {
 export async function resetUserAttempts(userId: string, packId: string) {
     await requireAdmin();
     try {
-        // Delete the completed session so user can retake
-        try {
-            await prisma.examSession.delete({
-                where: { userId_packId: { userId, packId } }
-            });
-        } catch (e) {
-            // Session may not exist, that's ok
-        }
-        // Decrement currentAttempts and increment maxAttempts to track retakes granted
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                currentAttempts: { decrement: 1 },
-                maxAttempts: { increment: 1 }
-            }
-        });
+        const pack = await prisma.quizPack.findUnique({ where: { id: packId }, select: { name: true } });
+        if (!pack) return { error: 'Paket ujian tidak ditemukan.' };
+
+        await prisma.$transaction([
+            // Delete the completed session so user can retake
+            prisma.examSession.deleteMany({
+                where: { userId, packId }
+            }),
+            // NOTE (Option 2): We intentionally DO NOT delete the Result record 
+            // to maintain a permanent history of past attempts.
+
+            // Decrement currentAttempts and increment maxAttempts to track retakes granted
+            prisma.user.update({
+                where: { id: userId },
+                data: {
+                    currentAttempts: { decrement: 1 },
+                    maxAttempts: { increment: 1 }
+                }
+            })
+        ]);
+
         return { success: true };
     } catch (e: any) {
-        return { error: 'Gagal mereset percobaan user.' };
+        return { error: 'Gagal mereset percobaan user. Transaksi dibatalkan.' };
     }
 }
 
@@ -268,7 +273,7 @@ export async function deletePack(id: string) {
 export async function getQuestions() {
     await requireAdmin();
     try {
-        return await prisma.question.findMany();
+        return await prisma.question.findMany({ orderBy: { createdAt: 'asc' } });
     } catch (e: any) {
         throw new Error('Gagal memuat data soal.');
     }
@@ -277,7 +282,10 @@ export async function getQuestions() {
 export async function getQuestionsByPack(packId: string) {
     await requireAdmin();
     try {
-        return await prisma.question.findMany({ where: { packId } });
+        return await prisma.question.findMany({
+            where: { packId },
+            orderBy: { createdAt: 'asc' }
+        });
     } catch (e: any) {
         throw new Error('Gagal memuat soal untuk paket ini.');
     }
@@ -357,11 +365,17 @@ export async function bulkDeleteResults(ids: string[]) {
 export async function bulkResetUserAttempts(userIds: string[], packId: string) {
     await requireAdmin();
     try {
+        const pack = await prisma.quizPack.findUnique({ where: { id: packId }, select: { name: true } });
+        if (!pack) return { error: 'Paket ujian tidak ditemukan.' };
+
         await prisma.$transaction([
             // Batch delete all sessions at once
             prisma.examSession.deleteMany({
                 where: { userId: { in: userIds }, packId }
             }),
+            // NOTE (Option 2): We intentionally DO NOT delete Result records 
+            // to maintain a permanent history.
+
             // Individual updates still needed for increment/decrement, but wrapped in transaction
             ...userIds.map(userId =>
                 prisma.user.update({
@@ -375,7 +389,7 @@ export async function bulkResetUserAttempts(userIds: string[], packId: string) {
         ]);
         return { success: true };
     } catch (e: any) {
-        return { error: 'Gagal mereset percobaan secara massal.' };
+        return { error: 'Gagal mereset percobaan secara massal. Transaksi dibatalkan.' };
     }
 }
 
@@ -388,13 +402,27 @@ export async function getAnalysis(packId: string) {
         if (!pack) return { questions: [], summary: null };
 
         // Get all questions for this pack
-        const questions = await prisma.question.findMany({ where: { packId } });
+        const questions = await prisma.question.findMany({
+            where: { packId },
+            orderBy: { createdAt: 'asc' }
+        });
 
-        // Get all results for this pack (with per-question answers + user info)
-        const results = await prisma.result.findMany({
+        // Get all raw results for this pack (includes historical retakes)
+        const rawResults = await prisma.result.findMany({
             where: { packName: pack.name },
             include: { user: { include: { class: true } } }
         });
+
+        // OPTION 2: HIGHEST SCORE POLICY
+        // Group by user and only keep the attempt with the maximum score
+        const userHighestScores = new Map<string, any>();
+        rawResults.forEach((r: any) => {
+            const existing = userHighestScores.get(r.userId);
+            if (!existing || r.score > existing.score) {
+                userHighestScores.set(r.userId, r);
+            }
+        });
+        const results = Array.from(userHighestScores.values());
 
         // Parse answers from each result
         const parsedResults = results.map((r: any) => {

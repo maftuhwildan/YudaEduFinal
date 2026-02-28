@@ -65,6 +65,7 @@ model Question {
   imageUrl      String?
   options       Json     @default("[]") // string[]
   correctAnswer String   @db.LongText
+  createdAt     DateTime @default(now())
   
   pack          QuizPack @relation(fields: [packId], references: [id], onDelete: Cascade)
 }
@@ -82,6 +83,7 @@ model Result {
   timestamp      DateTime @default(now())
   cheatCount     Int      @default(0)
   answers        Json?    // Record<questionId, selectedAnswer>
+  attempt        Int      @default(1) // Tracks retakes constraint
 
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

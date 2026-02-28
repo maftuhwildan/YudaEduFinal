@@ -61,12 +61,18 @@ export default function Home() {
     };
 
     const handleLogout = async () => {
-        // Clear UI state first to unmount dashboard (stops all intervals/polling)
-        setUser(null);
-        setResultReason('submitted');
-        setView('LOGIN');
-        // Then delete session cookie in background
-        await logout();
+        try {
+            // Tell the server to delete session cookie and token first
+            await logout();
+        } catch (error) {
+            console.error("Logout failed to reach server, forcing local logout:", error);
+        } finally {
+            // Clear UI state to unmount dashboard/quiz (stops all intervals/polling) ONLY AFTER
+            // server action completes (success or fail)
+            setUser(null);
+            setResultReason('submitted');
+            setView('LOGIN');
+        }
     };
 
     const handleFinish = (result: any) => {

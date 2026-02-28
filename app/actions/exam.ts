@@ -64,7 +64,7 @@ export async function getQuizData(packId: string, userId: string, token?: string
 
     const pack = await prisma.quizPack.findUnique({
         where: { id: packId },
-        include: { questions: true }
+        include: { questions: { orderBy: { createdAt: 'asc' } } }
     });
 
     if (!pack) throw new Error('Pack not found');
@@ -221,6 +221,11 @@ export async function submitQuizResult(resultData: any) {
             });
             sessionData = sess;
 
+            // Count how many attempts the user already had for this pack
+            const previousAttempts = await tx.result.count({
+                where: { userId, packName: sess?.packName || 'Unknown Exam' }
+            });
+
             // 3. Save to Result table
             await tx.result.create({
                 data: {
@@ -234,6 +239,7 @@ export async function submitQuizResult(resultData: any) {
                     variant: sess?.variant || 'A',
                     cheatCount,
                     answers: answers || {},
+                    attempt: previousAttempts + 1
                 },
             });
 

@@ -35,7 +35,6 @@ interface QuizProps {
 export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
     // --- Modal State (pure UI, stays in component) ---
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showCheatWarning, setShowCheatWarning] = useState(false);
     const [cheatWarningMsg, setCheatWarningMsg] = useState('');
 
@@ -117,7 +116,7 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
     };
 
     const { stage, availablePacks, selectedPackId, handlePackSelection,
-        tokenInput, setTokenInput, errorMessage, existingSession, startQuiz,
+        tokenInput, setTokenInput, errorMessage, existingSession, isCheckingSession, startQuiz,
         questions, pack, currentIndex, setCurrentIndex, answers, handleSelect,
         cheatCount, submitFailed, submitRetryCount } = session;
 
@@ -239,8 +238,22 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                             placeholder="TOKEN"
                         />
 
-                        <Button onClick={startQuiz} className="w-full" size="lg">
-                            {existingSession ? 'LANJUTKAN UJIAN' : 'MULAI UJIAN'}
+                        <Button
+                            onClick={startQuiz}
+                            className="w-full"
+                            size="lg"
+                            disabled={isCheckingSession}
+                        >
+                            {isCheckingSession ? (
+                                <>
+                                    <RotateCcw className="w-4 h-4 mr-2 animate-spin" />
+                                    Mengecek Sesi...
+                                </>
+                            ) : existingSession ? (
+                                'LANJUTKAN UJIAN'
+                            ) : (
+                                'MULAI UJIAN'
+                            )}
                         </Button>
                     </CardContent>
                 </Card>
@@ -305,27 +318,17 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="flex gap-3 sm:gap-0">
-                        <Button variant="outline" onClick={() => setShowSubmitConfirm(false)}>Kembali</Button>
-                        <Button onClick={() => { setShowSubmitConfirm(false); session.executeSubmission(); }}>Kumpulkan</Button>
+                        <Button variant="outline" onClick={() => setShowSubmitConfirm(false)} disabled={session.isSubmitting}>Kembali</Button>
+                        <Button onClick={() => session.executeSubmission()} disabled={session.isSubmitting}>
+                            {session.isSubmitting ? (
+                                <><RotateCcw className="w-4 h-4 mr-2 animate-spin" /> Mengumpulkan...</>
+                            ) : "Kumpulkan"}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Logout Confirm Modal */}
-            <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
-                <DialogContent className="sm:max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle>Keluar Ujian?</DialogTitle>
-                        <DialogDescription>
-                            Anda akan keluar dari aplikasi. Progres jawaban seharusnya tersimpan, tetapi resiko ditanggung sendiri.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="flex gap-3 sm:gap-0">
-                        <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>Batal</Button>
-                        <Button variant="destructive" onClick={logout}>Keluar</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* Removed Logout Confirm Modal from Active Quiz view */}
 
             {/* Header */}
             <header className="bg-card border-b px-4 sm:px-6 py-3 flex justify-between items-center z-20 h-16 shrink-0">
@@ -348,16 +351,6 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
 
                     <Button variant="ghost" size="icon" onClick={enterFullscreen} title="Mode Layar Penuh">
                         <Maximize className="w-5 h-5" />
-                    </Button>
-
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowLogoutConfirm(true)}
-                        className="hover:text-destructive hover:bg-destructive/10"
-                        title="Simpan & Keluar"
-                    >
-                        <LogOut className="w-5 h-5" />
                     </Button>
                 </div>
             </header>
@@ -476,8 +469,12 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
                                 <AlertDescription className="text-sm font-medium">
                                     Gagal mengirim jawaban. Jawaban tersimpan di perangkat.
                                 </AlertDescription>
-                                <Button variant="destructive" size="sm" onClick={session.executeSubmission}>
-                                    <RotateCcw className="w-4 h-4 mr-1" /> Coba Kirim Ulang
+                                <Button variant="destructive" size="sm" onClick={() => session.executeSubmission()} disabled={session.isSubmitting}>
+                                    {session.isSubmitting ? (
+                                        <><RotateCcw className="w-4 h-4 mr-1 animate-spin" /> Mengirim...</>
+                                    ) : (
+                                        <><RotateCcw className="w-4 h-4 mr-1" /> Coba Kirim Ulang</>
+                                    )}
                                 </Button>
                             </Alert>
                         )}
