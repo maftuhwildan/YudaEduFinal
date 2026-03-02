@@ -54,8 +54,8 @@ COPY --from=builder /app/public ./public
 # Copy Prisma schema (needed at runtime for migrations/queries)
 COPY --from=builder /app/prisma ./prisma
 
-# Install Prisma CLI globally (for `prisma db push` at startup)
-RUN npm install -g prisma
+# Install Prisma CLI globally (pinned to v6 to match project)
+RUN npm install -g prisma@^6.0.0
 
 # Copy entrypoint script
 COPY entrypoint.sh ./entrypoint.sh
