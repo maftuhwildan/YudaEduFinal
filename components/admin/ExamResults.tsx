@@ -58,7 +58,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
         message: string;
         onConfirm: () => void | Promise<void>;
         isLoading?: boolean;
-    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
     const requireConfirm = (title: string, message: string, onConfirm: () => void | Promise<void>) => {
         setConfirmState({ isOpen: true, title, message, onConfirm, isLoading: false });
@@ -493,7 +493,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                                 <TableCell className="font-mono">{r.variant || 'A'}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={r.score >= 75 ? "default" : "destructive"}>
-                                                        {Number(r.score).toFixed(2)}
+                                                        {Math.round(Number(r.score))}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="font-mono text-sm">
@@ -567,7 +567,7 @@ export const ExamResults: React.FC<ExamResultsProps> = ({
                                                             onClick={() => {
                                                                 requireConfirm(
                                                                     'Hapus Result',
-                                                                    `Hapus result ${r.username} (Score: ${Number(r.score).toFixed(2)})?`,
+                                                                    `Hapus result ${r.username} (Score: ${Math.round(Number(r.score))})?`,
                                                                     async () => {
                                                                         await onDeleteResult(r.id);
                                                                     }

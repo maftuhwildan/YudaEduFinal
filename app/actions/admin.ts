@@ -544,10 +544,10 @@ export async function getAnalysis(packId: string) {
             classId,
             className: data.name,
             studentCount: data.scores.length,
-            avgScore: parseFloat((data.scores.reduce((s, v) => s + v, 0) / data.scores.length).toFixed(1)),
+            avgScore: Math.round(data.scores.reduce((s, v) => s + v, 0) / data.scores.length),
             passRate: parseFloat(((data.passCount / data.scores.length) * 100).toFixed(1)),
-            highest: Math.max(...data.scores),
-            lowest: Math.min(...data.scores)
+            highest: Math.round(Math.max(...data.scores)),
+            lowest: Math.round(Math.min(...data.scores))
         })).sort((a, b) => b.avgScore - a.avgScore);
 
         // Top and bottom 5 students
@@ -572,10 +572,10 @@ export async function getAnalysis(packId: string) {
                 packName: pack.name,
                 totalQuestions: questions.length,
                 totalStudents,
-                avgScore: parseFloat(avgScore.toFixed(1)),
-                highestScore: parseFloat(highestScore.toFixed(1)),
-                lowestScore: parseFloat(lowestScore.toFixed(1)),
-                median: parseFloat(median.toFixed(1)),
+                avgScore: Math.round(avgScore),
+                highestScore: Math.round(highestScore),
+                lowestScore: Math.round(lowestScore),
+                median: Math.round(median),
                 stdDev: parseFloat(stdDev.toFixed(1)),
                 passRate: parseFloat(passRate.toFixed(1)),
                 distribution,
