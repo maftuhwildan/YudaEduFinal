@@ -32,6 +32,7 @@ Thumbs.db
 # IDE / Editor
 .vscode/
 .idea/
+*.code-workspace
 *.suo
 *.ntvs*
 *.njsproj

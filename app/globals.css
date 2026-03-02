@@ -292,3 +292,60 @@
 
 /* quiz-question-content and quiz-option-content: no overflow rules here.
    Clipping is handled by .quiz-scale-area (their parent/self) above. */
+
+/* ============================
+   WATERMARK OVERLAY (Anti-Screenshot)
+   ============================ */
+.watermark-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.watermark-grid {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  transform: rotate(-30deg);
+}
+
+.watermark-row {
+  display: flex;
+  justify-content: space-around;
+  gap: 2rem;
+  padding: 1.5rem 0;
+}
+
+.watermark-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  opacity: 0.07;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+
+/* Dark mode: slightly higher opacity for visibility in screenshots */
+.dark .watermark-text {
+  opacity: 0.09;
+}
+
+@media (max-width: 640px) {
+  .watermark-text {
+    font-size: 11px;
+  }
+
+  .watermark-row {
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+}

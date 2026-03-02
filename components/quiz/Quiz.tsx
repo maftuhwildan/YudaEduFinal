@@ -25,6 +25,7 @@ import { useQuizTimer } from '@/hooks/useQuizTimer';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
 import { useQuizSession } from '@/hooks/useQuizSession';
 import { useTableAutoScale } from '@/hooks/useTableAutoScale';
+import { Watermark } from '@/components/quiz/Watermark';
 
 interface QuizProps {
     user: SessionUser;
@@ -267,8 +268,15 @@ export const Quiz: React.FC<QuizProps> = ({ user, onFinish, onLogout }) => {
 
     const hasStimulus = !!currentQ.stimulus;
 
+    // Build watermark identity string
+    const watermarkParts = [user.username, user.fullName, user.className].filter(Boolean);
+    const watermarkText = watermarkParts.join(' — ');
+
     return (
         <div className="min-h-screen bg-background flex flex-col h-screen overflow-hidden select-none">
+
+            {/* Anti-Screenshot Watermark */}
+            <Watermark text={watermarkText} />
 
             {/* Fullscreen Lockout Modal */}
             <Dialog open={!isFullscreen && stage === 'QUIZ'} onOpenChange={() => { }}>
