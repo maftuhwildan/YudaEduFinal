@@ -487,6 +487,7 @@ export async function getAnalysis(packId: string) {
                 questionId: q.id,
                 text: q.text,
                 variant: q.variant,
+                options: opts,
                 attempts,
                 correctCount,
                 difficultyIndex: parseFloat(difficultyIndex.toFixed(2)),
@@ -540,15 +541,30 @@ export async function getAnalysis(packId: string) {
             if (r.score >= 75) classMap[classId].passCount++;
         });
 
-        const perClass = Object.entries(classMap).map(([classId, data]) => ({
-            classId,
-            className: data.name,
-            studentCount: data.scores.length,
-            avgScore: Math.round(data.scores.reduce((s, v) => s + v, 0) / data.scores.length),
-            passRate: parseFloat(((data.passCount / data.scores.length) * 100).toFixed(1)),
-            highest: Math.round(Math.max(...data.scores)),
-            lowest: Math.round(Math.min(...data.scores))
-        })).sort((a, b) => b.avgScore - a.avgScore);
+        const perClass = Object.entries(classMap).map(([classId, data]) => {
+            const n = data.scores.length;
+            const avg = data.scores.reduce((s, v) => s + v, 0) / n;
+            const sorted = [...data.scores].sort((a, b) => a - b);
+            const med = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+            const sd = Math.sqrt(data.scores.reduce((s, v) => s + Math.pow(v - avg, 2), 0) / n);
+            return {
+                classId,
+                className: data.name,
+                studentCount: n,
+                avgScore: Math.round(avg),
+                passRate: parseFloat(((data.passCount / n) * 100).toFixed(1)),
+                highest: Math.round(Math.max(...data.scores)),
+                lowest: Math.round(Math.min(...data.scores)),
+                median: Math.round(med),
+                stdDev: parseFloat(sd.toFixed(1)),
+                distribution: {
+                    excellent: data.scores.filter(s => s >= 90).length,
+                    good: data.scores.filter(s => s >= 75 && s < 90).length,
+                    average: data.scores.filter(s => s >= 60 && s < 75).length,
+                    poor: data.scores.filter(s => s < 60).length,
+                },
+            };
+        }).sort((a, b) => b.avgScore - a.avgScore);
 
         // Top and bottom 5 students
         const rankedStudents = results

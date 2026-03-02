@@ -51,9 +51,9 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
             highestScore: classData.highest,
             lowestScore: classData.lowest,
             passRate: classData.passRate,
-            // Median and stdDev not available per-class without raw data, hide or show N/A
-            median: '-',
-            stdDev: '-',
+            median: classData.median,
+            stdDev: classData.stdDev,
+            distribution: classData.distribution,
         };
     }, [analysisData, classFilter]);
 
@@ -194,7 +194,7 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
                                 </CardContent>
                             </Card>
 
-                            {classFilter === 'ALL' && s.distribution && (
+                            {s.distribution && (
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="text-base">Distribusi Nilai</CardTitle>
@@ -474,7 +474,13 @@ export const ExamAnalysis: React.FC<ExamAnalysisProps> = ({
                                                             {label}
                                                         </span>
                                                         <div className="flex-1 min-w-0">
-                                                            <span className="text-sm">{isCorrect ? '✓ Jawaban Benar' : `Opsi ${label}`}</span>
+                                                            <span className="text-sm">
+                                                                {selectedQuestion.options?.[idx]
+                                                                    ? <span dangerouslySetInnerHTML={{ __html: selectedQuestion.options[idx].replace(/<[^>]*>/g, '') }} />
+                                                                    : `Opsi ${label}`
+                                                                }
+                                                                {isCorrect && <span className="ml-1.5 text-green-600 font-semibold">✓ Benar</span>}
+                                                            </span>
                                                         </div>
                                                         {selectedQuestion.optionCounts && (
                                                             <div className="text-right">
