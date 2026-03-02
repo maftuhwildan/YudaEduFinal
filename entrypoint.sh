@@ -2,7 +2,7 @@
 set -e
 
 echo "==> Syncing database schema..."
-./node_modules/.bin/prisma db push --skip-generate --accept-data-loss
+node node_modules/prisma/build/index.js db push --skip-generate --accept-data-loss
 echo "==> Schema sync complete."
 
 echo "==> Starting application..."
